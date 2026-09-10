@@ -1,0 +1,79 @@
+{% extends 'account/base.html' %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="dashboard-grid">
+    <div class="dashboard-card stats-card">
+        <h3>Total Users</h3>
+        <p class="stat-value">{{ total_users }}</p>
+    </div>
+    <div class="dashboard-card stats-card">
+        <h3>Active Users</h3>
+        <p class="stat-value">{{ active_users }}</p>
+    </div>
+    <div class="dashboard-card stats-card">
+        <h3>Inactive Users</h3>
+        <p class="stat-value">{{ inactive_users }}</p>
+    </div>
+</div>
+
+<div class="dashboard-grid charts-grid">
+    <div class="dashboard-card chart-card">
+        <div class="chart-header">
+            <h3>User Signups</h3>
+        </div>
+        <canvas id="signupChart"></canvas>
+    </div>
+    <div class="dashboard-card chart-card">
+        <div class="chart-header">
+            <h3>Role Distribution</h3>
+        </div>
+        <canvas id="roleChart"></canvas>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const signupCtx = document.getElementById('signupChart').getContext('2d');
+    new Chart(signupCtx, {
+        type: 'line',
+        data: {
+            labels: {{ chart_months|safe }},
+            datasets: [{
+                label: 'User signups',
+                data: {{ chart_signups|safe }},
+                borderColor: '#2563eb',
+                backgroundColor: 'rgba(37, 99, 235, 0.15)',
+                tension: 0.35,
+                fill: true,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: false }
+            }
+        }
+    });
+
+    const roleCtx = document.getElementById('roleChart').getContext('2d');
+    new Chart(roleCtx, {
+        type: 'doughnut',
+        data: {
+            labels: {{ chart_roles|safe }},
+            datasets: [{
+                data: {{ chart_roles_count|safe }},
+                backgroundColor: ['#2563eb', '#14b8a6', '#eab308', '#f97316', '#ec4899'],
+                borderWidth: 0,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'bottom' }
+            }
+        }
+    });
+</script>
+{% endblock %}

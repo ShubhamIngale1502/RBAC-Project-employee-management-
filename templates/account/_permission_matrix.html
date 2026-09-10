@@ -1,0 +1,37 @@
+{# account/_permission_matrix.html #}
+{% load permission_tags %}
+<div class="table-responsive">
+  <table class="table table-bordered align-middle">
+    <thead class="table-light">
+      <tr>
+        <th>Model / Module</th>
+        <th class="text-center">View</th>
+        <th class="text-center">Add</th>
+        <th class="text-center">Edit</th>
+        <th class="text-center">Delete</th>
+        <th class="text-center">Export</th>
+        <th class="text-center">Approve</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for module in modules %}
+        {% with perm=permission_map|get_item:module.id %}
+        <tr>
+          <td>
+            {% if module.icon %}<i class="{{ module.icon }} me-1"></i>{% endif %}
+            {{ module.module_name }}
+          </td>
+          <td class="text-center"><input type="checkbox" name="view_{{ module.id }}" {% if perm.can_view %}checked{% endif %}></td>
+          <td class="text-center"><input type="checkbox" name="add_{{ module.id }}" {% if perm.can_add %}checked{% endif %}></td>
+          <td class="text-center"><input type="checkbox" name="edit_{{ module.id }}" {% if perm.can_edit %}checked{% endif %}></td>
+          <td class="text-center"><input type="checkbox" name="delete_{{ module.id }}" {% if perm.can_delete %}checked{% endif %}></td>
+          <td class="text-center"><input type="checkbox" name="export_{{ module.id }}" {% if perm.can_export %}checked{% endif %}></td>
+          <td class="text-center"><input type="checkbox" name="approve_{{ module.id }}" {% if perm.can_approve %}checked{% endif %}></td>
+        </tr>
+        {% endwith %}
+      {% empty %}
+        <tr><td colspan="7" class="text-center text-muted">No active modules found. Run <code>sync_modules</code>.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

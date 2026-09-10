@@ -1,0 +1,852 @@
+{% extends 'account/base.html' %}
+{% block title %}Roles & Permissions {% endblock %}
+
+{% block content %}
+{% load permission_tags %}
+<style>
+    /* ==========================================
+    ROLES & PERMISSIONS MATRIX STYLING
+    ========================================== */
+    .matrix-wrapper {
+        overflow-x: auto;
+        position: relative;
+        max-width: 100%;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background-color: var(--card-bg, #fff);
+    }
+    
+    .matrix-table {
+        border-collapse: separate;
+        border-spacing: 0;
+        width: max-content;
+        min-width: 100%;
+        table-layout: fixed;
+    }
+    
+    /* Columns styling */
+    .col-permission {
+        width: 280px;
+        min-width: 280px;
+        max-width: 280px;
+    }
+    
+    .col-module {
+        width: 150px;
+        min-width: 150px;
+        max-width: 150px;
+    }
+    
+    .col-role {
+        width: 180px;
+        min-width: 180px;
+        max-width: 180px;
+    }
+    
+    /* Sticky permission column */
+    .matrix-table th.col-permission,
+    .matrix-table td.col-permission {
+        position: sticky;
+        left: 0;
+        background-color: var(--card-bg, #fff);
+        z-index: 10;
+        border-right: 2px solid var(--border);
+        box-shadow: 4px 0 8px rgba(0, 0, 0, 0.03);
+    }
+    
+    .matrix-table th.col-permission {
+        z-index: 11;
+        background-color: #f8f9fa;
+    }
+    
+    /* Style for table headers */
+    .matrix-table th {
+        background-color: #f8f9fa;
+        border-bottom: 2px solid var(--border);
+        vertical-align: middle;
+        padding: 16px;
+    }
+    
+    .matrix-table td {
+        vertical-align: middle;
+        border-bottom: 1px solid var(--border);
+        padding: 14px 16px;
+    }
+    
+    /* Center checkboxes */
+    .matrix-table td.checkbox-cell {
+        text-align: center;
+    }
+    
+    /* Checkbox styling */
+    .perm-checkbox-wrapper {
+        position: relative;
+        display: inline-block;
+        width: 18px;
+        height: 18px;
+    }
+    
+    .perm-checkbox {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+        accent-color: #6f42c1; /* Modern premium purple tint */
+        margin: 0;
+    }
+    
+    .perm-checkbox:disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+    
+    /* Spinner */
+    .cell-spinner {
+        display: none;
+        width: 16px;
+        height: 16px;
+        border: 2px solid rgba(111, 66, 193, 0.2);
+        border-top-color: #6f42c1;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        position: absolute;
+        top: 1px;
+        left: 1px;
+    }
+    
+    .loading .perm-checkbox {
+        opacity: 0;
+    }
+    
+    .loading .cell-spinner {
+        display: inline-block;
+    }
+    
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+    
+    /* Module badge */
+    .badge-module {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        padding: 4px 8px;
+        border-radius: 4px;
+        background-color: rgba(111, 66, 193, 0.08);
+        color: #6f42c1;
+        border: 1px solid rgba(111, 66, 193, 0.15);
+        display: inline-block;
+    }
+    
+    /* Role Header styling */
+    .role-column-header {
+        transition: background-color 0.2s ease;
+    }
+    
+    .role-column-header:hover {
+        background-color: #f1f3f5;
+    }
+    
+    .role-actions button {
+        opacity: 0.5;
+        transition: opacity 0.2s ease;
+    }
+    
+    .role-column-header:hover .role-actions button {
+        opacity: 1;
+    }
+    
+    /* Custom pagination */
+    .page-btn {
+        padding: 6px 12px;
+        border: 1px solid var(--border);
+        background: #fff;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 13.5px;
+        transition: all 0.2s ease;
+    }
+    
+    .page-btn:hover:not(:disabled) {
+        background: #f8f9fa;
+        border-color: #adb5bd;
+    }
+    
+    .page-btn.active {
+        background: #6f42c1;
+        color: #fff;
+        border-color: #6f42c1;
+    }
+    
+    .page-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    input#swal2-input{
+        font-size: 14px !important;
+        border-radius: 6px !important;
+        margin-bottom: 20px !important;
+    }
+    .input-group.input-group-sm{
+        border: 1px solid var(--border) !important;
+        border-radius: 6px !important;
+    }
+    .input-group.input-group-sm span,.input-group.input-group-sm input{
+        border: none !important;
+    }
+   
+</style>
+
+<main class="content">
+    {% user_has_permission request.user 'auth.view_permission' as can_view_perm1 %}
+    {% user_has_permission request.user 'auth.view_group' as can_view_perm2 %}
+    {% user_has_permission request.user 'auth.add_group' as can_add_group %}
+    {% user_has_permission request.user 'auth.change_group' as can_change_group %}
+    {% user_has_permission request.user 'auth.delete_group' as can_delete_group %}
+
+    {% if can_view_perm1 or can_view_perm2 %}
+    <section class="page-header">
+        <div>
+            <span class="eyebrow"><i class="bi bi-shield-lock"></i> Security & Access</span>
+            <h1>Roles & Permissions</h1>
+            <p>Manage role-based access permissions. Changes are saved automatically in real-time.</p>
+        </div>
+        <div class="actions d-flex gap-2">
+            <button type="button" class="btn btn-outline btn-sm d-inline-flex align-items-center gap-2" id="exportBtn">
+                <i class="bi bi-file-earmark-excel"></i> Export Excel
+            </button>
+            {% if can_add_group %}
+            <button type="button" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-2" id="createRoleBtn">
+                <i class="bi bi-plus-circle"></i>
+                Create Role
+            </button>
+            {% endif %}
+        </div>
+    </section>
+    {% endif %}
+
+    <div class="tabs-list">
+        <a href="{% url 'user-list' %}" class="tab-trigger">Staff Users</a>
+        <a href="{% url 'role-list' %}" class="tab-trigger active">Roles & Permissions</a>
+        <a href="{% url 'user-list' %}" class="tab-trigger">Users</a>
+    </div>
+
+    <!-- Info Callout Banner -->
+    {% if can_view_perm1 or can_view_perm2 %}
+    <div class="alert alert-info d-flex align-items-center gap-2 mb-4 mt-3" role="alert" style="border-radius: 8px;">
+        <i class="bi bi-info-circle-fill text-primary" style="font-size: 1.2rem;"></i>
+        <div class="text-secondary small">
+            <strong>Real-time Auto Save:</strong> Check or uncheck permissions for any role below to update instantly. No manual save required.
+        </div>
+    </div>
+
+    <!-- Search & Filter Card -->
+    <div class="card mb-4" style="border-radius: 8px;">
+        <div class="card-body py-3">
+            <div class="row g-3">
+                <!-- Search -->
+                <div class="col-md-3">
+                    <label class="form-label small label mb-1">Search Permissions</label>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                        <input type="text" id="permissionSearch" class="form-control border-start-0 ps-0" placeholder="Search by name or code...">
+                    </div>
+                </div>
+                <!-- Module -->
+                <div class="col-md-2">
+                    <label class="form-label small label mb-1">Module</label>
+                    <select id="moduleFilter" class="form-select form-select-sm">
+                        <option value="">All Modules</option>
+                        {% for mod in modules %}
+                        <option value="{{ mod }}">{{ mod }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <!-- Category -->
+                <div class="col-md-2">
+                    <label class="form-label small label mb-1">Category</label>
+                    <select id="categoryFilter" class="form-select form-select-sm">
+                        <option value="">All Categories</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat }}">{{ cat }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <!-- Status -->
+                <div class="col-md-2">
+                    <label class="form-label small label mb-1">Status</label>
+                    <select id="statusFilter" class="form-select form-select-sm">
+                        <option value="">All Statuses</option>
+                        <option value="Active">Active (Assigned)</option>
+                        <option value="Inactive">Inactive (Unassigned)</option>
+                    </select>
+                </div>
+                <!-- Clear & View All Buttons -->
+                <div class="col-md-3 d-flex align-items-end gap-2">
+                    <button type="button" class="btn btn-outline-primary view-all-btn btn-sm flex-grow-1 d-flex align-items-center justify-content-center gap-1 py-2" style="border-radius: 6px; font-weight: 500;">
+                        <i class="bi bi-eye"></i> <span class="view-all-btn-text">View All</span>
+                    </button>
+                    <button type="button" id="clearFiltersBtn" class="btn btn-outline btn-sm flex-grow-1 d-flex align-items-center justify-content-center gap-1 py-2" style="border-radius: 6px; font-weight: 500;">
+                        <i class="bi bi-x-circle"></i> Clear Filters
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Matrix Card -->
+    <div class="card" style="border-radius: 8px; overflow: hidden;">
+        <div class="card-body p-0">
+            <div class="matrix-wrapper">
+                <table class="table matrix-table mb-0">
+                    <thead>
+                        <tr>
+                            <th class="col-permission">Permission</th>
+                            <th class="col-module">Module</th>
+                            {% for role in roles %}
+                            <th class="text-center role-column-header col-role" data-role-id="{{ role.id }}">
+                                <div class="d-flex flex-column align-items-center justify-content-center">
+                                    <div class="role-name-text fw-bold text-dark">{{ role.name }}</div>
+                                    <div class="role-member-count text-muted mt-1">
+                                        <i class="bi bi-people-fill"></i> {{ role.user_count }}
+                                    </div>
+                                    <div class="role-actions mt-2 d-flex gap-2">
+                                        {% if can_change_group %}
+                                        <button class="btn btn-link btn-sm p-0 text-primary rename-role-btn" data-role-id="{{ role.id }}" data-role-name="{{ role.name }}" title="Rename Role">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        {% endif %}
+                                        {% if role.name != 'SuperAdmin' and role.name != 'Partner' %}
+                                        {% if can_delete_group %}
+                                        <button class="btn btn-link btn-sm p-0 text-danger delete-role-btn" data-role-id="{{ role.id }}" data-role-name="{{ role.name }}" title="Delete Role">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                        {% endif %}
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody id="matrixTableBody">
+                        <!-- Filled by JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Table Footer -->
+            <div class="table-foot d-flex justify-content-between align-items-center p-3 border-top bg-light">
+                <span id="tblCount" class="text-secondary small fw-medium">Showing 0 - 0 of 0 permissions</span>
+                
+                <div class="d-flex align-items-center gap-3">
+                    <button type="button" class="btn btn-outline-primary view-all-btn btn-sm d-flex align-items-center gap-1" style="border-radius: 6px; font-size: 13px;">
+                        <i class="bi bi-eye"></i> <span class="view-all-btn-text">View All</span>
+                    </button>
+                    
+                    <!-- Pager -->
+                    <div class="pager d-flex gap-1" id="customPagination">
+                        <!-- Paginated buttons will be generated by JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+        {% include "errors/403.html" %}
+    {% endif %}
+</main>
+    
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<!-- Permissions and Roles JSON Payload -->
+<script>
+    const roles = [
+        {% for role in roles %}
+        {
+            id: {{ role.id }},
+            name: "{{ role.name|escapejs }}",
+            user_count: {{ role.user_count }}
+        },
+        {% endfor %}
+    ];
+
+    const permissions = [
+        {% for perm in permissions %}
+        {
+            id: {{ perm.id }},
+            name: "{{ perm.name|escapejs }}",
+            codename: "{{ perm.codename|escapejs }}",
+            app_label: "{{ perm.app_label|escapejs }}",
+            module: "{{ perm.module|escapejs }}",
+            category: "{{ perm.category|escapejs }}",
+            roles_mapping: {
+                {% for role_id, has_perm in perm.roles_mapping.items %}
+                "{{ role_id }}": {% if has_perm %}true{% else %}false{% endif %},
+                {% endfor %}
+            }
+        },
+        {% endfor %}
+    ];
+
+    const csrfToken = "{{ csrf_token }}";
+</script>
+
+<!-- Matrix Table Core JS Logic -->
+<script>
+    $(document).ready(function() {
+        let currentPage = 1;
+        const pageSize = 10;
+        let isViewAll = {% if view_all %}true{% else %}false{% endif %};
+        
+        let searchQuery = '';
+        let selectedModule = '';
+        let selectedCategory = '';
+        let selectedStatus = '';
+
+        // Toast configuration
+        const Toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true,
+            didOpen: (toast) => {
+                toast.addEventListener('mouseenter', Swal.stopTimer)
+                toast.addEventListener('mouseleave', Swal.resumeTimer)
+            }
+        });
+
+        // Filter Function
+        function getFilteredPermissions() {
+            return permissions.filter(perm => {
+                if (searchQuery) {
+                    const q = searchQuery.toLowerCase();
+                    if (!perm.name.toLowerCase().includes(q) && !perm.codename.toLowerCase().includes(q)) {
+                        return false;
+                    }
+                }
+                if (selectedModule && perm.module !== selectedModule) {
+                    return false;
+                }
+                if (selectedCategory && perm.category !== selectedCategory) {
+                    return false;
+                }
+                if (selectedStatus) {
+                    const hasAnyRole = Object.values(perm.roles_mapping).some(v => v === true);
+                    if (selectedStatus === 'Active' && !hasAnyRole) return false;
+                    if (selectedStatus === 'Inactive' && hasAnyRole) return false;
+                }
+                return true;
+            });
+        }
+
+        // Render Table
+        function renderTable() {
+            const filtered = getFilteredPermissions();
+            const totalRecords = filtered.length;
+            const effectivePageSize = isViewAll ? (totalRecords || 1) : pageSize;
+            const totalPages = Math.ceil(totalRecords / effectivePageSize) || 1;
+            
+            // Bounds check
+            if (currentPage > totalPages) {
+                currentPage = totalPages;
+            }
+            
+            const startIdx = isViewAll ? 0 : (currentPage - 1) * effectivePageSize;
+            const endIdx = isViewAll ? totalRecords : Math.min(startIdx + effectivePageSize, totalRecords);
+            const paginated = isViewAll ? filtered : filtered.slice(startIdx, endIdx);
+            
+            // Build body HTML
+            let bodyHtml = '';
+            if (paginated.length === 0) {
+                bodyHtml = `<tr><td colspan="${roles.length + 2}" class="text-center text-muted py-4">No matching permissions found.</td></tr>`;
+            } else {
+                paginated.forEach(perm => {
+                    bodyHtml += `<tr>`;
+                    // Column 1: Permission details
+                    bodyHtml += `
+                        <td class="col-permission">
+                            <div class="fw-bold text-dark mb-1">${perm.name}</div>
+                        </td>
+                    `;
+                    // Column 2: Module badge
+                    bodyHtml += `
+                        <td class="col-module">
+                            <span class="badge-module">${perm.module}</span>
+                        </td>
+                    `;
+                    // Dynamic role checkbox cells
+                    roles.forEach(role => {
+                        const isChecked = perm.roles_mapping[role.id] ? 'checked' : '';
+                        bodyHtml += `
+                            <td class="checkbox-cell col-role">
+                                <div class="perm-checkbox-wrapper" id="cell-${role.id}-${perm.id}">
+                                    <input type="checkbox" 
+                                           class="perm-checkbox form-check-input" 
+                                           data-role-id="${role.id}" 
+                                           data-permission-id="${perm.id}" 
+                                           ${isChecked}
+                                           {% if not can_change_group %}disabled{% endif %}>
+                                    <span class="cell-spinner"></span>
+                                </div>
+                            </td>
+                        `;
+                    });
+                    bodyHtml += `</tr>`;
+                });
+            }
+            
+            $('#matrixTableBody').html(bodyHtml);
+            
+            // Update View All Button states
+            if (isViewAll) {
+                $('.view-all-btn').removeClass('btn-outline-primary').addClass('btn-primary active');
+                $('.view-all-btn-text').text('Paginated View');
+                $('.view-all-btn i').attr('class', 'bi bi-layers');
+            } else {
+                $('.view-all-btn').removeClass('btn-primary active').addClass('btn-outline-primary');
+                $('.view-all-btn-text').text('View All');
+                $('.view-all-btn i').attr('class', 'bi bi-eye');
+            }
+
+            // Update table foot counts
+            if (totalRecords === 0) {
+                $('#tblCount').text('Showing 0 - 0 of 0 permissions');
+            } else if (isViewAll) {
+                if (searchQuery || selectedModule || selectedCategory || selectedStatus) {
+                    $('#tblCount').text(`Showing all ${totalRecords} matching permissions`);
+                } else {
+                    $('#tblCount').text(`Showing all ${totalRecords} permissions`);
+                }
+            } else {
+                $('#tblCount').text(`Showing ${startIdx + 1} - ${endIdx} of ${totalRecords} permissions`);
+            }
+            
+            // Build pagination buttons
+            if (isViewAll) {
+                $('#customPagination').html(`<span class="badge bg-light text-secondary border px-3 py-2 small fw-normal align-self-center"><i class="bi bi-check-circle me-1 text-success"></i> All ${totalRecords} permissions displayed</span>`);
+            } else {
+                buildPagination(totalPages);
+            }
+        }
+
+        // Build Pagination Buttons
+        function buildPagination(totalPages) {
+            let html = '';
+            
+            // Previous Button
+            html += `<button class="page-btn prev-btn" ${currentPage === 1 ? 'disabled' : ''}><i class="bi bi-chevron-left"></i></button>`;
+            
+            // Number Buttons
+            let startPage = Math.max(1, currentPage - 2);
+            let endPage = Math.min(totalPages, currentPage + 2);
+            
+            if (startPage > 1) {
+                html += `<button class="page-btn" data-page="1">1</button>`;
+                if (startPage > 2) {
+                    html += `<button class="page-btn" disabled>...</button>`;
+                }
+            }
+            
+            for (let i = startPage; i <= endPage; i++) {
+                html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" data-page="${i}">${i}</button>`;
+            }
+            
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) {
+                    html += `<button class="page-btn" disabled>...</button>`;
+                }
+                html += `<button class="page-btn" data-page="${totalPages}">${totalPages}</button>`;
+            }
+            
+            // Next Button
+            html += `<button class="page-btn next-btn" ${currentPage === totalPages ? 'disabled' : ''}><i class="bi bi-chevron-right"></i></button>`;
+            
+            $('#customPagination').html(html);
+        }
+
+        // Bind View All Button Click
+        $(document).on('click', '.view-all-btn', function() {
+            isViewAll = !isViewAll;
+            currentPage = 1;
+            renderTable();
+        });
+
+        // Bind Pagination Clicks
+        $(document).on('click', '.page-btn[data-page]', function() {
+            currentPage = parseInt($(this).data('page'));
+            renderTable();
+        });
+
+        $(document).on('click', '.prev-btn', function() {
+            if (currentPage > 1) {
+                currentPage--;
+                renderTable();
+            }
+        });
+
+        $(document).on('click', '.next-btn', function() {
+            const filtered = getFilteredPermissions();
+            const totalPages = Math.ceil(filtered.length / pageSize);
+            if (currentPage < totalPages) {
+                currentPage++;
+                renderTable();
+            }
+        });
+
+        // Filter Event Handlers
+        $('#permissionSearch').on('keyup input search', function() {
+            searchQuery = $(this).val();
+            currentPage = 1;
+            renderTable();
+        });
+
+        $('#moduleFilter').on('change', function() {
+            selectedModule = $(this).val();
+            currentPage = 1;
+            renderTable();
+        });
+
+        $('#categoryFilter').on('change', function() {
+            selectedCategory = $(this).val();
+            currentPage = 1;
+            renderTable();
+        });
+
+        $('#statusFilter').on('change', function() {
+            selectedStatus = $(this).val();
+            currentPage = 1;
+            renderTable();
+        });
+
+        $('#clearFiltersBtn').on('click', function() {
+            $('#permissionSearch').val('');
+            $('#moduleFilter').val('');
+            $('#categoryFilter').val('');
+            $('#statusFilter').val('');
+            searchQuery = '';
+            selectedModule = '';
+            selectedCategory = '';
+            selectedStatus = '';
+            currentPage = 1;
+            renderTable();
+        });
+
+        // Export Excel Flow
+        $('#exportBtn').click(function () {
+            let params = new URLSearchParams();
+            params.set('export', 'true');
+            if (searchQuery) params.set('search', searchQuery);
+            if (selectedModule) params.set('module', selectedModule);
+            if (selectedCategory) params.set('category', selectedCategory);
+            if (selectedStatus) params.set('status', selectedStatus);
+
+            window.location.href = `{% url 'role-list' %}?${params.toString()}`;
+        });
+
+        // Auto Save Checkbox Interaction
+        $(document).on('change', '.perm-checkbox', function() {
+            const checkbox = $(this);
+            const wrapper = checkbox.closest('.perm-checkbox-wrapper');
+            const roleId = checkbox.data('role-id');
+            const permId = checkbox.data('permission-id');
+            const isChecked = checkbox.is(':checked');
+            const action = isChecked ? 'grant' : 'revoke';
+            
+            // Set loading state
+            wrapper.addClass('loading');
+            checkbox.prop('disabled', true);
+            
+            // Ajax update
+            $.ajax({
+                url: "{% url 'update-permission-ajax' %}",
+                type: "POST",
+                data: {
+                    role_id: roleId,
+                    permission_id: permId,
+                    action: action,
+                    csrfmiddlewaretoken: csrfToken
+                },
+                success: function(response) {
+                    wrapper.removeClass('loading');
+                    checkbox.prop('disabled', false);
+                    
+                    if (response.success) {
+                        // Update local cache
+                        const perm = permissions.find(p => p.id === permId);
+                        if (perm) {
+                            perm.roles_mapping[roleId] = isChecked;
+                        }
+                        
+                        Toast.fire({
+                            icon: 'success',
+                            title: response.message
+                        });
+                    } else {
+                        // Revert checkbox state
+                        checkbox.prop('checked', !isChecked);
+                        Toast.fire({
+                            icon: 'error',
+                            title: response.message || 'An error occurred.'
+                        });
+                    }
+                },
+                error: function(xhr) {
+                    wrapper.removeClass('loading');
+                    checkbox.prop('disabled', false);
+                    // Revert checkbox state
+                    checkbox.prop('checked', !isChecked);
+                    
+                    const msg = xhr.responseJSON?.message || 'Failed to update permission.';
+                    Toast.fire({
+                        icon: 'error',
+                        title: msg
+                    });
+                }
+            });
+        });
+
+        // Create Role Flow
+        $('#createRoleBtn').on('click', function() {
+            Swal.fire({
+                title: 'Create New Role',
+                input: 'text',
+                inputPlaceholder: 'Enter role name...',
+                showCancelButton: true,
+                cancelButtonText: '<i class="bi bi-x-circle me-1"></i> Cancel',
+                confirmButtonText: '<i class="bi bi-check-circle me-1"></i> Create',
+                confirmButtonColor: '#6f42c1',
+                showLoaderOnConfirm: true,
+                preConfirm: (name) => {
+                    if (!name || name.trim() === '') {
+                        Swal.showValidationMessage('Role name is required');
+                        return false;
+                    }
+                    return $.ajax({
+                        url: "{% url 'role-create' %}",
+                        type: "POST",
+                        data: {
+                            name: name.trim(),
+                            csrfmiddlewaretoken: csrfToken,
+                            ajax: 'true'
+                        }
+                    }).catch(xhr => {
+                        const msg = xhr.responseJSON?.message || 'Failed to create role';
+                        Swal.showValidationMessage(msg);
+                    });
+                },
+                allowOutsideClick: () => !Swal.isLoading()
+            }).then((result) => {
+                if (result.isConfirmed && result.value.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Created!',
+                        text: result.value.message,
+                        timer: 1500
+                    }).then(() => {
+                        location.reload();
+                    });
+                }
+            });
+        });
+
+        // Rename Role Flow
+        $(document).on('click', '.rename-role-btn', function() {
+            const btn = $(this);
+            const roleId = btn.data('role-id');
+            const currentName = btn.data('role-name');
+            
+            Swal.fire({
+                title: 'Rename Role',
+                input: 'text',
+                inputValue: currentName,
+                inputPlaceholder: 'Enter new role name...',
+                showCancelButton: true,
+                cancelButtonText: '<i class="bi bi-x-circle me-1"></i> Cancel',
+                confirmButtonText: '<i class="bi bi-pencil-square"></i> Rename',
+                confirmButtonColor: '#6f42c1',
+                showLoaderOnConfirm: true,
+                preConfirm: (name) => {
+                    if (!name || name.trim() === '') {
+                        Swal.showValidationMessage('Role name is required');
+                        return false;
+                    }
+                    return $.ajax({
+                        url: `/account/roles/${roleId}/`,
+                        type: "POST",
+                        data: {
+                            name: name.trim(),
+                            csrfmiddlewaretoken: csrfToken,
+                            ajax: 'true'
+                        }
+                    }).catch(xhr => {
+                        const msg = xhr.responseJSON?.message || 'Failed to rename role';
+                        Swal.showValidationMessage(msg);
+                    });
+                },
+                allowOutsideClick: () => !Swal.isLoading()
+            }).then((result) => {
+                if (result.isConfirmed && result.value.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Renamed!',
+                        text: result.value.message,
+                        timer: 1500
+                    }).then(() => {
+                        location.reload();
+                    });
+                }
+            });
+        });
+
+        // Delete Role Flow
+        $(document).on('click', '.delete-role-btn', function() {
+            const btn = $(this);
+            const roleId = btn.data('role-id');
+            const roleName = btn.data('role-name');
+            
+            Swal.fire({
+                title: 'Are you sure?',
+                text: `You are about to delete the role "${roleName}". All user memberships associated with this role will be removed.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, delete it!',
+                showLoaderOnConfirm: true,
+                preConfirm: () => {
+                    return $.ajax({
+                        url: `/account/delete-group/${roleId}/`,
+                        type: "POST",
+                        data: {
+                            csrfmiddlewaretoken: csrfToken
+                        }
+                    }).catch(xhr => {
+                        const msg = xhr.responseJSON?.error || 'Failed to delete role';
+                        Swal.showValidationMessage(msg);
+                    });
+                },
+                allowOutsideClick: () => !Swal.isLoading()
+            }).then((result) => {
+                if (result.isConfirmed && result.value.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Deleted!',
+                        text: 'Role has been successfully deleted.',
+                        timer: 1500
+                    }).then(() => {
+                        location.reload();
+                    });
+                }
+            });
+        });
+
+        // Initial render
+        renderTable();
+    });
+</script>
+{% endblock %}

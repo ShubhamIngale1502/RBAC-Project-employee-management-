@@ -1,0 +1,12 @@
+{# account/role_permissions.html #}
+{% extends "account/base.html" %}
+{% block content %}
+<h3>Manage Permissions — {{ role.role_name }}</h3>
+<p class="text-muted">Grant or revoke access per model for this role.</p>
+
+<form method="post">
+  {% csrf_token %}
+  {% include "account/_permission_matrix.html" %}
+  <button type="submit" class="btn btn-primary mt-3">Save Permissions</button>
+</form>
+{% endblock %}

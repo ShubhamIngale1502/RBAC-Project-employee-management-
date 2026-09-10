@@ -1,0 +1,27 @@
+{# account/user_permissions.html #}
+{% extends "account/base.html" %}
+{% block content %}
+<h3>Manage Roles & Permissions — {{ user.first_name }} {{ user.last_name }}</h3>
+
+<form method="post">
+  {% csrf_token %}
+
+  <h5>Assigned Roles</h5>
+  <div class="mb-3">
+    {% for role in roles %}
+    <div class="form-check form-check-inline">
+      <input class="form-check-input" type="checkbox" name="roles" value="{{ role.id }}"
+             id="role_{{ role.id }}" {% if role.id in assigned_role_ids %}checked{% endif %}>
+      <label class="form-check-label" for="role_{{ role.id }}">{{ role.role_name }}</label>
+    </div>
+    {% empty %}
+    <p class="text-muted">You are not permitted to assign any roles to this user.</p>
+    {% endfor %}
+  </div>
+
+  <h5>Model-Level Overrides (takes priority over role permissions)</h5>
+  {% include "account/_permission_matrix.html" %}
+
+  <button type="submit" class="btn btn-primary mt-3">Save</button>
+</form>
+{% endblock %}

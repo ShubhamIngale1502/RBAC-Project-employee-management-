@@ -1,0 +1,6 @@
+*.pyc
+media/
+static/
+*/migrations/
+staticfiles/
+__pycache__
