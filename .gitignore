@@ -3,4 +3,5 @@ media/
 static/
 staticfiles/
 __pycache__
-*/migrations/
+migrations/
+

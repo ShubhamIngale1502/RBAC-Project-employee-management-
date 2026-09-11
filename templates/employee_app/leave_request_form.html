@@ -1,0 +1,10 @@
+{% extends "account/base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<section class="leave-card" style="max-width:680px"><h2>{{ title }}</h2><p>Save a draft first; submit it when you are ready.</p>
+  <form class="leave-form" method="post">{% csrf_token %}{{ form.non_field_errors }}
+    {% for field in form %}<label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% for error in field.errors %}<small style="color:#b42318">{{ error }}</small>{% endfor %}{% endfor %}
+    <button type="submit">Save draft</button> <a href="{% url 'leave-request-page' %}">Cancel</a>
+  </form>
+</section>
+{% endblock %}
