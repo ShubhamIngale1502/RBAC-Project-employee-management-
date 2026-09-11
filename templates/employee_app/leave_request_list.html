@@ -1,0 +1,18 @@
+{% extends "account/base.html" %}
+{% block title %}Leave requests{% endblock %}
+{% block content %}
+<style>
+  .leave-grid{display:grid;grid-template-columns:minmax(280px,.8fr) minmax(520px,1.6fr);gap:24px;align-items:start}.leave-card{background:#fff;border:1px solid #e6e9ef;border-radius:14px;padding:24px;box-shadow:0 4px 18px rgba(27,39,94,.05)}.leave-card h2{margin:0 0 6px;color:#182230;font-size:1.25rem}.leave-card p{color:#667085;margin:0 0 20px}.leave-form label{display:block;font-weight:600;font-size:.86rem;margin:15px 0 6px;color:#344054}.leave-form input,.leave-form select,.leave-form textarea{box-sizing:border-box;width:100%;border:1px solid #d0d5dd;border-radius:8px;padding:10px;font:inherit}.leave-form textarea{min-height:88px;resize:vertical}.leave-form button{background:#155eef;color:#fff;border:0;border-radius:8px;padding:11px 15px;margin-top:18px;font-weight:600;cursor:pointer}.leave-table{width:100%;border-collapse:collapse}.leave-table th,.leave-table td{text-align:left;padding:13px 10px;border-bottom:1px solid #eaecf0;font-size:.9rem}.leave-table th{color:#667085;font-weight:600}.badge{display:inline-block;border-radius:999px;padding:4px 9px;font-size:.75rem;font-weight:700;background:#eff8ff;color:#175cd3}.badge.APPROVED{background:#ecfdf3;color:#027a48}.badge.REJECTED,.badge.CANCELLED{background:#fef3f2;color:#b42318}.badge.PENDING_MANAGER,.badge.PENDING_HR{background:#fffaeb;color:#b54708}.empty{padding:38px;text-align:center;color:#667085}.api-note{font-size:.82rem;color:#667085;margin-top:18px}.api-note code{background:#f2f4f7;padding:2px 5px;border-radius:4px}@media(max-width:900px){.leave-grid{grid-template-columns:1fr}.leave-table{display:block;overflow-x:auto}}
+</style>
+<section class="leave-grid">
+  <article class="leave-card"><h2>Request time off</h2><p>Your request will go to your manager, then HR.</p>
+    <form class="leave-form" method="post" action="{% url 'leave-request-create' %}">{% csrf_token %}
+      {{ form.non_field_errors }}{{ form.leave_type.label_tag }}{{ form.leave_type }}{{ form.start_date.label_tag }}{{ form.start_date }}{{ form.end_date.label_tag }}{{ form.end_date }}{{ form.reason.label_tag }}{{ form.reason }}
+      <button type="submit">Submit request</button>
+    </form>
+  </article>
+  <article class="leave-card"><h2>{% if can_review %}Leave requests{% else %}My leave requests{% endif %}</h2><p>Follow the request status and complete approvals from one place.</p>
+    {% if leave_requests %}<table class="leave-table"><thead><tr><th>Employee</th><th>Type</th><th>Dates</th><th>Status</th><th></th></tr></thead><tbody>{% for leave in leave_requests %}<tr><td>{{ leave.employee.get_full_name }}</td><td>{{ leave.leave_type.leave_name }}</td><td>{{ leave.start_date|date:"d M Y" }} – {{ leave.end_date|date:"d M Y" }}</td><td><span class="badge {{ leave.status }}">{{ leave.get_status_display }}</span></td><td>{% if leave.employee.user_id == request.user.id and leave.status == 'DRAFT' %}<a href="{% url 'leave-request-edit' leave.pk %}">Edit</a> · <form method="post" action="{% url 'leave-request-submit' leave.pk %}" style="display:inline">{% csrf_token %}<button type="submit">Submit</button></form> · <form method="post" action="{% url 'leave-request-delete' leave.pk %}" style="display:inline">{% csrf_token %}<button type="submit">Delete</button></form>{% elif can_review and leave.status == 'PENDING_MANAGER' or can_review and leave.status == 'PENDING_HR' %}<a href="{% url 'leave-request-review' leave.pk %}">Review</a>{% endif %}</td></tr>{% endfor %}</tbody></table>{% else %}<div class="empty">No leave requests yet.</div>{% endif %}
+  </article>
+</section>
+{% endblock %}

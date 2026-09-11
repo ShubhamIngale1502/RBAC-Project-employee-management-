@@ -8,6 +8,9 @@ from account.models import User
 def dashboard_home(request):
     total_users = User.objects.count()
     active_users = User.objects.filter(is_active=True).count()
+    managers = User.objects.filter(role__iexact="MANAGER").count()
+    employees = User.objects.filter(role__iexact="EMPLOYEE").count()
+    hr_users = User.objects.filter(role__iexact="HR").count()
     inactive_users = total_users - active_users
 
     role_counts = (
@@ -38,5 +41,8 @@ def dashboard_home(request):
         'chart_signups': chart_signups,
         'chart_roles': chart_roles,
         'chart_roles_count': chart_roles_count,
+        'managers': managers,
+        'employees': employees,
+        'hr_users': hr_users,
     }
     return render(request, 'dashboard/dashboard.html', context)

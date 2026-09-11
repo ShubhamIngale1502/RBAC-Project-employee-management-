@@ -38,4 +38,5 @@ urlpatterns = [
     path('', include('dashboard.urls')),
     path('users/', include('account.urls')),
     path('api/', include('employee_app.urls')),
+    path('leaves/', include('employee_app.web_urls')),
 ]

@@ -1,0 +1,7 @@
+{% extends "account/base.html" %}
+{% block title %}Review leave request{% endblock %}
+{% block content %}
+<section class="leave-card" style="max-width:680px"><h2>Review leave request</h2><p><strong>{{ leave_request.employee.get_full_name }}</strong> requested {{ leave_request.leave_type.leave_name }} from {{ leave_request.start_date }} to {{ leave_request.end_date }}.</p><p>{{ leave_request.reason }}</p>
+  <form class="leave-form" method="post">{% csrf_token %}{{ form.non_field_errors }}{% for field in form %}<label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% endfor %}<button type="submit">Save decision</button> <a href="{% url 'leave-request-page' %}">Cancel</a></form>
+</section>
+{% endblock %}
