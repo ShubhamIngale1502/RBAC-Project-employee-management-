@@ -16,7 +16,7 @@ from rest_framework.views import APIView
 from django.http import Http404
 from django.urls import reverse
 
-from .models import Department, Designation, Employee, LeaveRequest, LeaveType,EmploymentType, Holiday, Shift
+from .models import Department, Designation, Employee, LeaveBalance, LeaveRequest, LeaveType,EmploymentType, Holiday, Shift
 from .serializers import (DepartmentSerializer, DesignationSerializer, EmployeeSerializer,
                           LeaveRequestSerializer, LeaveTypeSerializer)
 from .forms import (
@@ -192,36 +192,204 @@ class LeaveRequestActionView(SafeAPIView):
                 return Response({"detail": "Unknown leave action."}, status=400)
         return Response(LeaveRequestSerializer(leave_request).data)
 
+def calculate_leave_days(start_date, end_date):
+    return (end_date - start_date).days + 1
+
+def get_used_leave_days(employee, leave_type):
+    approved_leaves = LeaveRequest.objects.filter(
+        employee=employee,
+        leave_type=leave_type,
+        status=LeaveRequest.Status.APPROVED,
+    )
+
+    total_used = 0
+
+    for leave in approved_leaves:
+        total_used += calculate_leave_days(
+            leave.start_date,
+            leave.end_date
+        )
+
+    return total_used
+
+def get_remaining_leave_days(employee, leave_type):
+    balance = LeaveBalance.objects.filter(
+        employee=employee,
+        leave_type=leave_type
+    ).first()
+
+    if not balance:
+        return 0
+
+    used_days = get_used_leave_days(
+        employee,
+        leave_type
+    )
+
+    return max(
+        balance.allocated_days - used_days,
+        0
+    )
 
 @login_required
 def leave_request_page(request):
-    return render(request, "employee_app/leave_request_list.html", {
-        "leave_requests": _leave_queryset_for(request.user),
-        "form": LeaveRequestForm(),
-        "can_review": _is_hr_or_admin(request.user) or (request.user.role or "").upper() == "MANAGER",
-    })
+
+    try:
+        employee = request.user.employee
+    except Employee.DoesNotExist:
+        employee = None
+
+    leave_balances = []
+
+    if employee:
+
+        balances = (
+            LeaveBalance.objects
+            .filter(employee=employee)
+            .select_related("leave_type")
+        )
+
+        for balance in balances:
+
+            used_days = get_used_leave_days(
+                employee,
+                balance.leave_type
+            )
+
+            remaining_days = max(
+                balance.allocated_days - used_days,
+                0
+            )
+
+            leave_balances.append({
+                "leave_type": balance.leave_type,
+                "allocated_days": balance.allocated_days,
+                "used_days": used_days,
+                "remaining_days": remaining_days,
+            })
+
+    return render(
+        request,
+        "employee_app/leave_request_list.html",
+        {
+            "leave_requests": _leave_queryset_for(request.user),
+
+            "form": LeaveRequestForm(),
+
+            "leave_balances": leave_balances,
+
+            "can_review": (
+                _is_hr_or_admin(request.user)
+                or (request.user.role or "").upper() == "MANAGER"
+            ),
+        }
+    )
 
 
 @login_required
 def leave_request_create(request):
+
     try:
         employee = request.user.employee
+
     except Employee.DoesNotExist:
-        messages.error(request, "An employee profile is required before requesting leave.")
+        messages.error(
+            request,
+            "An employee profile is required before requesting leave."
+        )
+
         return redirect("leave-request-page")
+
     form = LeaveRequestForm(request.POST or None)
+
     if request.method == "POST" and form.is_valid():
+
         try:
+
             leave_request = form.save(commit=False)
+
             leave_request.employee = employee
+
             leave_request.full_clean()
-            leave_request.save()
-            messages.success(request, "Leave request saved as a draft.")
-            return redirect("leave-request-page")
-        except (DjangoValidationError, IntegrityError) as exc:
-            form.add_error(None, "Could not save this request. Please verify the dates and leave type.")
-            logger.warning("Invalid leave request: %s", exc)
-    return render(request, "employee_app/leave_request_form.html", {"form": form, "title": "Request leave"})
+
+            leave_type = leave_request.leave_type
+
+            requested_days = calculate_leave_days(
+                leave_request.start_date,
+                leave_request.end_date
+            )
+
+            balance = LeaveBalance.objects.filter(
+                employee=employee,
+                leave_type=leave_type
+            ).first()
+
+            if not balance:
+
+                form.add_error(
+                    "leave_type",
+                    "No leave balance has been assigned for this leave type."
+                )
+
+            else:
+
+                used_days = get_used_leave_days(
+                    employee,
+                    leave_type
+                )
+
+                remaining_days = max(
+                    balance.allocated_days - used_days,
+                    0
+                )
+
+                if requested_days > remaining_days:
+
+                    form.add_error(
+                        "leave_type",
+                        (
+                            f"You can request only "
+                            f"{remaining_days} day(s) of "
+                            f"{leave_type.leave_name}. "
+                            f"You requested {requested_days} day(s)."
+                        )
+                    )
+
+                else:
+
+                    leave_request.save()
+
+                    messages.success(
+                        request,
+                        "Leave request saved as a draft."
+                    )
+
+                    return redirect("leave-request-page")
+
+        except (
+            DjangoValidationError,
+            IntegrityError
+        ) as exc:
+
+            form.add_error(
+                None,
+                "Could not save this request. "
+                "Please verify the dates and leave type."
+            )
+
+            logger.warning(
+                "Invalid leave request: %s",
+                exc
+            )
+
+    return render(
+        request,
+        "employee_app/leave_request_form.html",
+        {
+            "form": form,
+            "title": "Request leave",
+        }
+    )
 
 
 @login_required
@@ -253,13 +421,75 @@ def leave_request_delete(request, pk):
 @login_required
 @require_POST
 def leave_request_submit(request, pk):
-    leave_request = get_object_or_404(LeaveRequest, pk=pk)
+
+    leave_request = get_object_or_404(
+        LeaveRequest,
+        pk=pk,
+        employee__user=request.user,
+        status=LeaveRequest.Status.DRAFT
+    )
+
     try:
+
+        employee = leave_request.employee
+        leave_type = leave_request.leave_type
+
+        requested_days = calculate_leave_days(
+            leave_request.start_date,
+            leave_request.end_date
+        )
+
+        balance = LeaveBalance.objects.filter(
+            employee=employee,
+            leave_type=leave_type
+        ).first()
+
+        if not balance:
+
+            raise DjangoValidationError(
+                "No leave balance has been assigned "
+                "for this leave type."
+            )
+
+        used_days = get_used_leave_days(
+            employee,
+            leave_type
+        )
+
+        remaining_days = max(
+            balance.allocated_days - used_days,
+            0
+        )
+
+        if requested_days > remaining_days:
+
+            raise DjangoValidationError(
+                (
+                    f"Insufficient leave balance. "
+                    f"Available: {remaining_days} day(s), "
+                    f"Requested: {requested_days} day(s)."
+                )
+            )
+
         with transaction.atomic():
+
             leave_request.submit(request.user)
-        messages.success(request, "Leave request submitted for approval.")
-    except (PermissionDenied, DjangoValidationError) as exc:
-        messages.error(request, str(exc))
+
+        messages.success(
+            request,
+            "Leave request submitted for approval."
+        )
+
+    except (
+        PermissionDenied,
+        DjangoValidationError
+    ) as exc:
+
+        messages.error(
+            request,
+            str(exc)
+        )
+
     return redirect("leave-request-page")
 
 

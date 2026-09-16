@@ -1,43 +1,198 @@
 {% extends 'account/base.html' %}
-{% block title %}User List{% endblock %}
+{% load permission_tags %}
+
+{% block title %}User Directory{% endblock %}
+{% block page_title %}User Management{% endblock %}
 
 {% block content %}
-<div class="card">
-    <div class="card-header">
-        <h2>User List</h2>
-        <a class="btn btn-primary" href="{% url 'user-create' %}">Add New User</a>
+{% user_has_permission request.user 'account.toggle_user_status' as can_toggle_status %}
+{% user_has_permission request.user 'account.change_user' as can_change_user %}
+{% user_has_permission request.user 'account.delete_user' as can_delete_user %}
+
+<div class="card border-0 shadow-sm" style="border-radius: 16px; overflow: hidden;">
+    <!-- Card Header with Search & Actions -->
+    <div class="card-header bg-white py-3 px-4 d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3 border-bottom">
+        <div>
+            <h6 class="fw-bold text-dark mb-0">System Users</h6>
+            <small class="text-muted">Manage staff accounts, active status, roles, and profiles</small>
+        </div>
+        
+        <div class="d-flex align-items-center gap-2">
+            <div class="input-group input-group-sm" style="max-width: 240px;">
+                <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
+                <input type="text" id="userTableSearch" class="form-control bg-light border-start-0 ps-0" placeholder="Search user...">
+            </div>
+            <a class="btn btn-primary btn-sm rounded-pill px-3 d-inline-flex align-items-center gap-1" href="{% url 'user-create' %}">
+                <i class="bi bi-person-plus-fill"></i>
+                <span>Add User</span>
+            </a>
+        </div>
     </div>
 
-    <table class="data-table">
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Mobile</th>
-                <th>Role</th>
-                <th>City</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for user in users %}
-            <tr>
-                <td>{{ user.get_full_name|default:user.username }}</td>
-                <td>{{ user.email }}</td>
-                <td>{{ user.mobile|default:'-' }}</td>
-                <td>{{ user.role|default:'-' }}</td>
-                <td>{{ user.user_profile.city|default:'-' }}</td>
-                <td>
-                    <a class="btn btn-secondary" href="{% url 'user-update' user.pk %}">Edit</a>
-                    <a class="btn btn-danger" href="{% url 'user-delete' user.pk %}">Delete</a>
-                </td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="5" class="empty-state">No users found yet.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <!-- User Table -->
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0" id="userTable">
+            <thead class="table-light">
+                <tr>
+                    <th class="ps-4" style="font-size: 0.78rem; text-transform: uppercase; color: #64748b;">User</th>
+                    <th style="font-size: 0.78rem; text-transform: uppercase; color: #64748b;">Email</th>
+                    <th style="font-size: 0.78rem; text-transform: uppercase; color: #64748b;">Mobile</th>
+                    <th style="font-size: 0.78rem; text-transform: uppercase; color: #64748b;">Role</th>
+                    <th style="font-size: 0.78rem; text-transform: uppercase; color: #64748b;">City</th>
+                    <th style="font-size: 0.78rem; text-transform: uppercase; color: #64748b;">Status</th>
+                    <th class="text-end pe-4" style="font-size: 0.78rem; text-transform: uppercase; color: #64748b;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td class="ps-4">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="rounded-circle text-white d-flex align-items-center justify-content-center fw-bold text-uppercase" style="width: 38px; height: 38px; background: linear-gradient(135deg, #2563eb, #4f46e5); font-size: 0.88rem;">
+                                {{ user.first_name|default:user.username|slice:":1" }}
+                            </div>
+                            <div>
+                                <h6 class="fw-semibold text-dark mb-0" style="font-size: 0.92rem;">
+                                    {{ user.get_full_name|default:user.username }}
+                                </h6>
+                                <small class="text-muted" style="font-size: 0.78rem;">@{{ user.username }}</small>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="text-secondary small">{{ user.email }}</td>
+                    <td class="text-secondary small">{{ user.mobile|default:'-' }}</td>
+                    <td>
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1 font-monospace" style="font-size: 0.75rem;">
+                            {{ user.role|default:'Staff' }}
+                        </span>
+                    </td>
+                    <td class="text-secondary small">{{ user.user_profile.city|default:'-' }}</td>
+                    <td id="user-status-cell-{{ user.pk }}">
+                        {% if user.is_active %}
+                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1 d-inline-flex align-items-center gap-1" style="font-size: 0.75rem;">
+                                <i class="bi bi-circle-fill" style="font-size: 0.4rem !important;"></i> Active
+                            </span>
+                        {% else %}
+                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-3 py-1 d-inline-flex align-items-center gap-1" style="font-size: 0.75rem;">
+                                <i class="bi bi-circle-fill" style="font-size: 0.4rem !important;"></i> Inactive
+                            </span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end pe-4">
+                        <div class="d-flex align-items-center justify-content-end gap-2">
+                            <!-- Interactive Status Toggle Switch -->
+                            <div class="form-check form-switch m-0" title="Toggle User Active Status">
+                                <input class="form-check-input user-status-toggle" 
+                                       type="checkbox" 
+                                       role="switch" 
+                                       data-user-id="{{ user.pk }}"
+                                       data-user-name="{{ user.get_full_name|default:user.username }}"
+                                       {% if user.is_active %}checked{% endif %}
+                                       {% if not request.user.is_superuser and not can_toggle_status and not can_change_user %}disabled{% endif %}>
+                            </div>
+
+                            <div class="btn-group btn-group-sm">
+                                <a class="btn btn-outline-secondary" href="{% url 'user-update' user.pk %}" title="Edit User">
+                                    <i class="bi bi-pencil-square"></i>
+                                </a>
+                                {% if can_delete_user or request.user.is_superuser %}
+                                <a class="btn btn-outline-danger" href="{% url 'user-delete' user.pk %}" title="Delete User">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center text-muted py-5">
+                        <i class="bi bi-people fs-1 text-secondary opacity-50 d-block mb-2"></i>
+                        No user accounts found yet.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+    // Search Filtering
+    document.getElementById('userTableSearch')?.addEventListener('keyup', function() {
+        const query = this.value.toLowerCase();
+        const rows = document.querySelectorAll('#userTable tbody tr');
+        rows.forEach(row => {
+            const text = row.innerText.toLowerCase();
+            row.style.display = text.includes(query) ? '' : 'none';
+        });
+    });
+
+    // AJAX Toggle User Active Status Switch
+    $(document).on('change', '.user-status-toggle', function() {
+        const switchInput = $(this);
+        const userId = switchInput.data('user-id');
+        const userName = switchInput.data('user-name');
+        const isChecked = switchInput.is(':checked');
+        
+        switchInput.prop('disabled', true);
+
+        $.ajax({
+            url: `/users/toggle-user-status/${userId}/`,
+            type: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            success: function(response) {
+                switchInput.prop('disabled', false);
+                if (response.success) {
+                    const statusCell = $(`#user-status-cell-${userId}`);
+                    if (response.is_active) {
+                        statusCell.html(`
+                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1 d-inline-flex align-items-center gap-1" style="font-size: 0.75rem;">
+                                <i class="bi bi-circle-fill" style="font-size: 0.4rem !important;"></i> Active
+                            </span>
+                        `);
+                    } else {
+                        statusCell.html(`
+                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-3 py-1 d-inline-flex align-items-center gap-1" style="font-size: 0.75rem;">
+                                <i class="bi bi-circle-fill" style="font-size: 0.4rem !important;"></i> Inactive
+                            </span>
+                        `);
+                    }
+                    
+                    Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: 'success',
+                        title: response.message,
+                        showConfirmButton: false,
+                        timer: 2500
+                    });
+                } else {
+                    switchInput.prop('checked', !isChecked);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Action Failed',
+                        text: response.message || 'Could not toggle user status.'
+                    });
+                }
+            },
+            error: function(xhr) {
+                switchInput.prop('disabled', false);
+                switchInput.prop('checked', !isChecked);
+                const msg = xhr.responseJSON?.message || 'Error toggling user status.';
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Permission Denied',
+                    text: msg
+                });
+            }
+        });
+    });
+</script>
 {% endblock %}

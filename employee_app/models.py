@@ -478,3 +478,28 @@ class LeaveApproval(models.Model):
         if (user.role or "").upper() == cls.ActorRole.MANAGER:
             return cls.ActorRole.MANAGER
         return cls.ActorRole.EMPLOYEE
+
+class LeaveBalance(models.Model):
+    employee = models.ForeignKey(
+        Employee,
+        on_delete=models.CASCADE,
+        related_name="leave_balances"
+    )
+
+    leave_type = models.ForeignKey(
+        LeaveType,
+        on_delete=models.CASCADE,
+        related_name="leave_balances"
+    )
+
+    allocated_days = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        unique_together = ("employee", "leave_type")
+
+    def __str__(self):
+        return (
+            f"{self.employee} - "
+            f"{self.leave_type.leave_name}"
+        )
+    

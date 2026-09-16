@@ -1,51 +1,67 @@
 {% extends 'account/base.html' %}
 {% block title %}{% if is_update %}Update User{% else %}Create User{% endif %}{% endblock %}
+{% block page_title %}{% if is_update %}Edit User Account{% else %}Create New User{% endif %}{% endblock %}
 
 {% block content %}
-<div class="card form-card">
-    <div class="card-header">
-        <h2>{% if is_update %}Update User{% else %}Create User{% endif %}</h2>
-        <a class="btn btn-secondary" href="{% url 'user-list' %}">Back to list</a>
+<div class="card border-0 shadow-sm" style="border-radius: 16px; max-width: 900px; margin: 0 auto;">
+    <div class="card-header bg-white py-3 px-4 d-flex align-items-center justify-content-between border-bottom">
+        <div>
+            <h6 class="fw-bold text-dark mb-0">{% if is_update %}Update User Credentials{% else %}New User Information{% endif %}</h6>
+            <small class="text-muted">Fill in account details and profile information</small>
+        </div>
+        <a class="btn btn-outline-secondary btn-sm rounded-pill px-3" href="{% url 'user-list' %}">
+            <i class="bi bi-arrow-left me-1"></i> Back to Directory
+        </a>
     </div>
 
-    <form method="post" enctype="multipart/form-data">
-        {% csrf_token %}
+    <div class="card-body p-4">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
 
-        {% if form.non_field_errors %}
-            <div class="form-errors">{{ form.non_field_errors }}</div>
-        {% endif %}
-
-        <div class="form-grid">
-            {% for field in form %}
-                <div class="field-group">
-                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                    {{ field }}
-                    {% if field.errors %}
-                        <div class="field-errors">{{ field.errors }}</div>
-                    {% endif %}
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger border-0 small mb-4" role="alert" style="border-radius: 10px;">
+                    {{ form.non_field_errors }}
                 </div>
-            {% endfor %}
-        </div>
+            {% endif %}
 
-        <div class="section-title">Profile Details</div>
-        <div class="form-grid">
-            {% for field in profile_form %}
-                <div class="field-group">
-                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                    {{ field }}
-                    {% if field.errors %}
-                        <div class="field-errors">{{ field.errors }}</div>
-                    {% endif %}
-                </div>
-            {% endfor %}
-        </div>
+            <!-- Account Details Section -->
+            <h6 class="fw-bold text-primary mb-3 pb-2 border-bottom"><i class="bi bi-person-badge me-2"></i>Account Credentials</h6>
+            <div class="row g-3 mb-4">
+                {% for field in form %}
+                    <div class="col-12 col-md-6">
+                        <label for="{{ field.id_for_label }}" class="form-label small fw-semibold text-secondary">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.errors %}
+                            <div class="text-danger text-xs mt-1" style="font-size: 0.8rem;">{{ field.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
 
-        <div class="form-actions">
-            <button class="btn btn-primary" type="submit">Save</button>
-            <a class="btn btn-secondary" href="{% url 'user-list' %}">Cancel</a>
-        </div>
-    </form>
+            <!-- Profile Details Section -->
+            <h6 class="fw-bold text-primary mb-3 pb-2 border-bottom"><i class="bi bi-geo-alt me-2"></i>Location & Address Details</h6>
+            <div class="row g-3 mb-4">
+                {% for field in profile_form %}
+                    <div class="col-12 col-md-6">
+                        <label for="{{ field.id_for_label }}" class="form-label small fw-semibold text-secondary">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.errors %}
+                            <div class="text-danger text-xs mt-1" style="font-size: 0.8rem;">{{ field.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+
+            <div class="d-flex align-items-center gap-2 pt-3 border-top">
+                <button class="btn btn-primary px-4 rounded-pill fw-semibold" type="submit">
+                    <i class="bi bi-check-lg me-1"></i> Save Account
+                </button>
+                <a class="btn btn-light px-4 rounded-pill text-secondary border" href="{% url 'user-list' %}">Cancel</a>
+            </div>
+        </form>
+    </div>
 </div>
+
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
 <script>
@@ -72,37 +88,26 @@
                 });
             }
         })
-    })
-</script>
-<script>
-
-$("#id_state").change(function () {
-
-    var state_id = $(this).val();
-
-    $.ajax({
-        url: "{% url 'ajax-load-cities' %}",
-        data: {
-            state: state_id
-        },
-        success: function (data) {
-
-            $("#id_city").html('<option value="">Select City</option>');
-
-            $.each(data, function (index, city) {
-
-                $("#id_city").append(
-                    '<option value="' + city.id + '">' +
-                    city.city_name +
-                    '</option>'
-                );
-
-            });
-
-        }
     });
 
-});
-
+    $("#id_state").change(function () {
+        var state_id = $(this).val();
+        $.ajax({
+            url: "{% url 'ajax-load-cities' %}",
+            data: {
+                state: state_id
+            },
+            success: function (data) {
+                $("#id_city").html('<option value="">Select City</option>');
+                $.each(data, function (index, city) {
+                    $("#id_city").append(
+                        '<option value="' + city.id + '">' +
+                        city.city_name +
+                        '</option>'
+                    );
+                });
+            }
+        });
+    });
 </script>
 {% endblock %}

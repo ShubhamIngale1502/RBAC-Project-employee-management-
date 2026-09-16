@@ -1,5 +1,28 @@
 {% extends "account/base.html" %}
 {% block title %}Delete {{ page_title }}{% endblock %}
+{% block page_title %}Confirm Deletion{% endblock %}
+
 {% block content %}
-<section class="record-form" style="max-width:560px"><h2>Delete {{ page_title|slice:":-1" }}</h2><p>Are you sure you want to delete <strong>{{ object }}</strong>? This cannot be undone.</p><form method="post">{% csrf_token %}<button class="save" style="background:#b42318" type="submit">Delete</button> <a class="cancel" href="{% url 'management-list' model_key %}">Cancel</a></form></section>
+<div class="card border-0 shadow-sm mx-auto" style="border-radius: 16px; max-width: 520px;">
+  <div class="card-body p-4 text-center">
+    <div class="rounded-circle bg-danger-subtle text-danger d-inline-flex align-items-center justify-content-center mb-3" style="width: 64px; height: 64px; font-size: 1.75rem;">
+      <i class="bi bi-exclamation-triangle-fill"></i>
+    </div>
+
+    <h5 class="fw-bold text-dark mb-2">Delete {{ page_title|slice:":-1" }}?</h5>
+    <p class="text-secondary small mb-4">
+      Are you sure you want to delete <strong>{{ object }}</strong>? This action cannot be undone.
+    </p>
+
+    <form method="post">
+      {% csrf_token %}
+      <div class="d-flex align-items-center justify-content-center gap-2">
+        <button class="btn btn-danger rounded-pill px-4 fw-semibold" type="submit">
+          <i class="bi bi-trash me-1"></i> Confirm Delete
+        </button>
+        <a href="{% url 'management-list' model_key %}" class="btn btn-light rounded-pill px-4 text-secondary border">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
 {% endblock %}
