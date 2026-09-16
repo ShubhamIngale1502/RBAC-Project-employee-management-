@@ -1,18 +1,255 @@
 {% extends "account/base.html" %}
-{% block title %}Leave requests{% endblock %}
+{% block title %}Leave Requests{% endblock %}
+{% block page_title %}Leave Management{% endblock %}
+
 {% block content %}
-<style>
-  .leave-grid{display:grid;grid-template-columns:minmax(280px,.8fr) minmax(520px,1.6fr);gap:24px;align-items:start}.leave-card{background:#fff;border:1px solid #e6e9ef;border-radius:14px;padding:24px;box-shadow:0 4px 18px rgba(27,39,94,.05)}.leave-card h2{margin:0 0 6px;color:#182230;font-size:1.25rem}.leave-card p{color:#667085;margin:0 0 20px}.leave-form label{display:block;font-weight:600;font-size:.86rem;margin:15px 0 6px;color:#344054}.leave-form input,.leave-form select,.leave-form textarea{box-sizing:border-box;width:100%;border:1px solid #d0d5dd;border-radius:8px;padding:10px;font:inherit}.leave-form textarea{min-height:88px;resize:vertical}.leave-form button{background:#155eef;color:#fff;border:0;border-radius:8px;padding:11px 15px;margin-top:18px;font-weight:600;cursor:pointer}.leave-table{width:100%;border-collapse:collapse}.leave-table th,.leave-table td{text-align:left;padding:13px 10px;border-bottom:1px solid #eaecf0;font-size:.9rem}.leave-table th{color:#667085;font-weight:600}.badge{display:inline-block;border-radius:999px;padding:4px 9px;font-size:.75rem;font-weight:700;background:#eff8ff;color:#175cd3}.badge.APPROVED{background:#ecfdf3;color:#027a48}.badge.REJECTED,.badge.CANCELLED{background:#fef3f2;color:#b42318}.badge.PENDING_MANAGER,.badge.PENDING_HR{background:#fffaeb;color:#b54708}.empty{padding:38px;text-align:center;color:#667085}.api-note{font-size:.82rem;color:#667085;margin-top:18px}.api-note code{background:#f2f4f7;padding:2px 5px;border-radius:4px}@media(max-width:900px){.leave-grid{grid-template-columns:1fr}.leave-table{display:block;overflow-x:auto}}
-</style>
-<section class="leave-grid">
-  <article class="leave-card"><h2>Request time off</h2><p>Your request will go to your manager, then HR.</p>
-    <form class="leave-form" method="post" action="{% url 'leave-request-create' %}">{% csrf_token %}
-      {{ form.non_field_errors }}{{ form.leave_type.label_tag }}{{ form.leave_type }}{{ form.start_date.label_tag }}{{ form.start_date }}{{ form.end_date.label_tag }}{{ form.end_date }}{{ form.reason.label_tag }}{{ form.reason }}
-      <button type="submit">Submit request</button>
-    </form>
-  </article>
-  <article class="leave-card"><h2>{% if can_review %}Leave requests{% else %}My leave requests{% endif %}</h2><p>Follow the request status and complete approvals from one place.</p>
-    {% if leave_requests %}<table class="leave-table"><thead><tr><th>Employee</th><th>Type</th><th>Dates</th><th>Status</th><th></th></tr></thead><tbody>{% for leave in leave_requests %}<tr><td>{{ leave.employee.get_full_name }}</td><td>{{ leave.leave_type.leave_name }}</td><td>{{ leave.start_date|date:"d M Y" }} – {{ leave.end_date|date:"d M Y" }}</td><td><span class="badge {{ leave.status }}">{{ leave.get_status_display }}</span></td><td>{% if leave.employee.user_id == request.user.id and leave.status == 'DRAFT' %}<a href="{% url 'leave-request-edit' leave.pk %}">Edit</a> · <form method="post" action="{% url 'leave-request-submit' leave.pk %}" style="display:inline">{% csrf_token %}<button type="submit">Submit</button></form> · <form method="post" action="{% url 'leave-request-delete' leave.pk %}" style="display:inline">{% csrf_token %}<button type="submit">Delete</button></form>{% elif can_review and leave.status == 'PENDING_MANAGER' or can_review and leave.status == 'PENDING_HR' %}<a href="{% url 'leave-request-review' leave.pk %}">Review</a>{% endif %}</td></tr>{% endfor %}</tbody></table>{% else %}<div class="empty">No leave requests yet.</div>{% endif %}
-  </article>
-</section>
+<div class="row g-4">
+  <!-- Left Side: Request Time Off Form Card -->
+  <div class="col-12 col-lg-5 col-xl-4">
+    <div class="card border-0 shadow-sm" style="border-radius: 16px;">
+      <div class="card-header bg-white py-3 px-4 border-bottom">
+        <h6 class="fw-bold text-dark mb-0">Request Time Off</h6>
+        <small class="text-muted">Submits to manager and HR for approval</small>
+      </div>
+
+      <div class="card-body p-4">
+
+    <!-- Leave Balance Section -->
+    {% if leave_balances %}
+
+        <div class="mb-4">
+
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <div>
+                    <h6 class="fw-bold text-dark mb-0">
+                        Leave Balance
+                    </h6>
+
+                    <small class="text-muted">
+                        Your available leave
+                    </small>
+                </div>
+
+                <i class="bi bi-calendar-check text-primary fs-5"></i>
+            </div>
+
+
+            <div class="row g-2">
+
+                {% for balance in leave_balances %}
+
+                <div class="col-12">
+
+                    <div class="border rounded-3 p-3 bg-light">
+
+                        <div class="d-flex justify-content-between align-items-center">
+
+                            <div>
+
+                                <div class="fw-semibold text-dark">
+                                    {{ balance.leave_type.leave_name }}
+                                </div>
+
+                                <small class="text-muted">
+                                    Allocated:
+                                    {{ balance.allocated_days }}
+                                    days
+                                </small>
+
+                            </div>
+
+
+                            <div class="text-end">
+
+                                <div class="fw-bold fs-5
+                                    {% if balance.remaining_days > 0 %}
+                                        text-success
+                                    {% else %}
+                                        text-danger
+                                    {% endif %}
+                                ">
+                                    {{ balance.remaining_days }}
+                                </div>
+
+                                <small class="text-muted">
+                                    Remaining
+                                </small>
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="d-flex justify-content-between mt-2">
+
+                            <small class="text-muted">
+                                Used:
+                                {{ balance.used_days }}
+                            </small>
+
+                            <small class="text-muted">
+                                Total:
+                                {{ balance.allocated_days }}
+                            </small>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                {% endfor %}
+
+            </div>
+
+        </div>
+
+        <hr class="mb-4">
+
+    {% endif %}
+
+      
+
+    <form method="post" action="{% url 'leave-request-create' %}">
+          {% csrf_token %}
+
+          {% if form.non_field_errors %}
+            <div class="alert alert-danger border-0 small mb-3" role="alert" style="border-radius: 10px;">
+              {{ form.non_field_errors }}
+            </div>
+          {% endif %}
+
+            <div class="mb-3">
+
+                <label
+                    for="{{ form.leave_type.id_for_label }}"
+                    class="form-label small fw-semibold text-secondary">
+                    Leave Type
+                </label>
+
+                {{ form.leave_type }}
+
+                <small class="text-muted d-block mt-1">
+                    Select a leave type from your available balance above.
+                </small>
+
+            </div>
+
+          <div class="row g-2 mb-3">
+            <div class="col-6">
+              <label for="{{ form.start_date.id_for_label }}" class="form-label small fw-semibold text-secondary">Start Date</label>
+              {{ form.start_date }}
+            </div>
+            <div class="col-6">
+              <label for="{{ form.end_date.id_for_label }}" class="form-label small fw-semibold text-secondary">End Date</label>
+              {{ form.end_date }}
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <label for="{{ form.reason.id_for_label }}" class="form-label small fw-semibold text-secondary">Reason</label>
+            {{ form.reason }}
+          </div>
+
+            <button
+                type="submit"
+                class="btn btn-primary w-100 rounded-pill fw-semibold"
+
+                <i class="bi bi-send me-1"></i>
+                Submit Request
+            </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Side: Leave Requests History Table Card -->
+  <div class="col-12 col-lg-7 col-xl-8">
+    <div class="card border-0 shadow-sm" style="border-radius: 16px; overflow: hidden;">
+      <div class="card-header bg-white py-3 px-4 d-flex align-items-center justify-content-between border-bottom">
+        <div>
+          <h6 class="fw-bold text-dark mb-0">
+            {% if can_review %}All Employee Leave Requests{% else %}My Leave Requests{% endif %}
+          </h6>
+          <small class="text-muted">Monitor request status and complete approvals</small>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        {% if leave_requests %}
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th class="ps-4" style="font-size: 0.78rem; text-transform: uppercase; color: #64748b;">Employee</th>
+                <th style="font-size: 0.78rem; text-transform: uppercase; color: #64748b;">Type</th>
+                <th style="font-size: 0.78rem; text-transform: uppercase; color: #64748b;">Dates</th>
+                <th style="font-size: 0.78rem; text-transform: uppercase; color: #64748b;">Status</th>
+                <th class="text-end pe-4" style="font-size: 0.78rem; text-transform: uppercase; color: #64748b;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for leave in leave_requests %}
+                <tr>
+                  <td class="ps-4">
+                    <div class="d-flex align-items-center gap-2">
+                      <div class="rounded-circle text-white d-flex align-items-center justify-content-center fw-bold text-uppercase" style="width: 32px; height: 32px; background: linear-gradient(135deg, #0d9488, #14b8a6); font-size: 0.8rem;">
+                        {{ leave.employee.get_full_name|slice:":1" }}
+                      </div>
+                      <span class="fw-semibold text-dark small">{{ leave.employee.get_full_name }}</span>
+                    </div>
+                  </td>
+                  <td class="text-secondary small">{{ leave.leave_type.leave_name }}</td>
+                  <td class="text-secondary small">{{ leave.start_date|date:"d M Y" }} – {{ leave.end_date|date:"d M Y" }}</td>
+                  <td>
+                    {% if leave.status == 'APPROVED' %}
+                      <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1" style="font-size: 0.75rem;">Approved</span>
+                    {% elif leave.status == 'REJECTED' or leave.status == 'CANCELLED' %}
+                      <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-3 py-1" style="font-size: 0.75rem;">{{ leave.get_status_display }}</span>
+                    {% elif leave.status == 'PENDING_MANAGER' or leave.status == 'PENDING_HR' %}
+                      <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-3 py-1" style="font-size: 0.75rem;">{{ leave.get_status_display }}</span>
+                    {% else %}
+                      <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle rounded-pill px-3 py-1" style="font-size: 0.75rem;">{{ leave.get_status_display }}</span>
+                    {% endif %}
+                  </td>
+                  <td class="text-end pe-4">
+                    {% if leave.employee.user_id == request.user.id and leave.status == 'DRAFT' %}
+                      <div class="btn-group btn-group-sm">
+                        <a class="btn btn-outline-secondary" href="{% url 'leave-request-edit' leave.pk %}" title="Edit Draft">
+                          <i class="bi bi-pencil-square"></i>
+                        </a>
+                        <form method="post" action="{% url 'leave-request-submit' leave.pk %}" class="d-inline">
+                          {% csrf_token %}
+                          <button type="submit" class="btn btn-outline-primary" title="Submit">
+                            <i class="bi bi-send"></i>
+                          </button>
+                        </form>
+                        <form method="post" action="{% url 'leave-request-delete' leave.pk %}" class="d-inline">
+                          {% csrf_token %}
+                          <button type="submit" class="btn btn-outline-danger" title="Delete">
+                            <i class="bi bi-trash"></i>
+                          </button>
+                        </form>
+                      </div>
+                    {% elif can_review and leave.status == 'PENDING_MANAGER' or can_review and leave.status == 'PENDING_HR' %}
+                      <a href="{% url 'leave-request-review' leave.pk %}" class="btn btn-primary btn-sm rounded-pill px-3">
+                        <i class="bi bi-check2-circle me-1"></i> Review
+                      </a>
+                    {% else %}
+                      <span class="text-muted small">—</span>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <div class="text-center text-muted py-5 px-4">
+            <i class="bi bi-calendar-x fs-1 text-secondary opacity-50 d-block mb-2"></i>
+            No leave requests recorded yet.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}

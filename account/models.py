@@ -37,6 +37,13 @@ class User(AbstractUser):
     USERNAME_FIELD = 'username'
     REQUIRED_FIELDS = ['first_name', 'last_name', 'mobile', 'email']
 
+    class Meta:
+        permissions = [
+            ("toggle_user_status", "Can toggle user status"),
+            ("activate_user", "Can activate user"),
+            ("deactivate_user", "Can deactivate user"),
+        ]
+
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
     

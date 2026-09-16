@@ -15,7 +15,8 @@ class UserCrudViewsTests(TestCase):
         self.city = City.objects.create(city_name='Bengaluru')
 
     def test_user_list_page_renders(self):
-        User.objects.create_user(username='alice', email='alice@example.com', password='secret123')
+        user = User.objects.create_superuser(username='alice', email='alice@example.com', password='secret123')
+        self.client.force_login(user)
 
         response = self.client.get(reverse('user-list'))
 
@@ -23,6 +24,9 @@ class UserCrudViewsTests(TestCase):
         self.assertContains(response, 'alice')
 
     def test_create_user_saves_and_redirects(self):
+        admin = User.objects.create_superuser(username='admin', email='admin@example.com', password='secret123')
+        self.client.force_login(admin)
+
         response = self.client.post(
             reverse('multi-step-1'),
             {
@@ -54,9 +58,10 @@ class UserCrudViewsTests(TestCase):
         self.assertEqual(user.role, 'Developer')
 
     def test_update_form_preselects_and_saves_role(self):
-        user = User.objects.create_user(
+        user = User.objects.create_superuser(
             username='alice', email='alice@example.com', password='secret123', role='Developer'
         )
+        self.client.force_login(user)
 
         response = self.client.get(reverse('user-update', args=[user.pk]))
         self.assertEqual(response.context['form'].initial['role'], 'Developer')
@@ -80,6 +85,21 @@ class UserCrudViewsTests(TestCase):
         self.assertRedirects(response, reverse('user-list'))
         user.refresh_from_db()
         self.assertEqual(user.role, 'Manager')
+
+    def test_toggle_user_status_view(self):
+        admin = User.objects.create_superuser(username='admin_toggle', email='admin_toggle@example.com', password='secret123')
+        target_user = User.objects.create_user(username='target_user', email='target@example.com', password='secret123', is_active=True)
+        self.client.force_login(admin)
+
+        response = self.client.post(reverse('toggle-user-status', args=[target_user.pk]), HTTP_X_REQUESTED_WITH='XMLHttpRequest')
+        self.assertEqual(response.status_code, 200)
+        target_user.refresh_from_db()
+        self.assertFalse(target_user.is_active)
+
+        response = self.client.post(reverse('toggle-user-status', args=[target_user.pk]), HTTP_X_REQUESTED_WITH='XMLHttpRequest')
+        self.assertEqual(response.status_code, 200)
+        target_user.refresh_from_db()
+        self.assertTrue(target_user.is_active)
 
 
 class JwtAuthenticationTests(TestCase):

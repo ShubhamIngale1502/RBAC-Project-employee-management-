@@ -327,14 +327,20 @@ class RoleListView(LoginRequiredMixin, PermissionRequiredMixin, View):
         allowed_permissions = {
             "account.add_user", "account.change_user",
             "account.delete_user", "account.view_user",
+            "account.toggle_user_status", "account.activate_user", "account.deactivate_user",
             "account.manage_content_management",
             "account.main_dashboard_view",
-            "auth.add_group", "auth.change_group", "auth.delete_group", "auth.view_group", "auth.view_permission"
+            "auth.add_group", "auth.change_group", "auth.delete_group", "auth.view_group", "auth.view_permission",
+            "employee_app.add_employee", "employee_app.change_employee", "employee_app.delete_employee", "employee_app.view_employee",
+            "employee_app.add_leaverequest", "employee_app.change_leaverequest", "employee_app.delete_leaverequest", "employee_app.view_leaverequest",
+            "employee_app.add_leavetype", "employee_app.change_leavetype", "employee_app.delete_leavetype", "employee_app.view_leavetype",
+            "employee_app.add_approval", "employee_app.change_approval", "employee_app.delete_approval", "employee_app.view_approval",
         }
 
         app_module_map = {
             'account': 'User Management',
             'auth': 'Authentication & Authorization',
+            'employee_app': 'Employee Management',
         }
         
         formatted_permissions = []
@@ -348,7 +354,7 @@ class RoleListView(LoginRequiredMixin, PermissionRequiredMixin, View):
             # Determine category based on permission action
             if codename.startswith('add_'):
                 category = 'Create'
-            elif codename.startswith('change_'):
+            elif codename.startswith('change_') or 'toggle' in codename or 'activate' in codename or 'deactivate' in codename:
                 category = 'Edit'
             elif codename.startswith('delete_'):
                 category = 'Delete'
@@ -623,3 +629,54 @@ def logout_view(request):
     )
 
     return redirect("login")
+
+class ToggleUserStatusView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        # Permission check: allow if user has toggle_user_status, activate_user, deactivate_user, change_user or is superuser
+        has_perm = (
+            request.user.is_superuser or
+            request.user.has_perm("account.toggle_user_status") or
+            request.user.has_perm("account.activate_user") or
+            request.user.has_perm("account.deactivate_user") or
+            request.user.has_perm("account.change_user")
+        )
+        if not has_perm:
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'application/json' in request.META.get('HTTP_ACCEPT', ''):
+                return JsonResponse({'success': False, 'message': 'Permission denied.'}, status=403)
+            messages.error(request, 'Permission denied.')
+            return redirect('user-list')
+
+        user = get_object_or_404(User, pk=pk)
+
+        # Prevent user deactivating self
+        if user == request.user and user.is_active:
+            msg = "You cannot deactivate your own account while logged in."
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'application/json' in request.META.get('HTTP_ACCEPT', ''):
+                return JsonResponse({'success': False, 'message': msg}, status=400)
+            messages.error(request, msg)
+            return redirect('user-list')
+
+        # Prevent non-superuser deactivating superuser
+        if user.is_superuser and not request.user.is_superuser:
+            msg = "Only superusers can toggle superuser status."
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'application/json' in request.META.get('HTTP_ACCEPT', ''):
+                return JsonResponse({'success': False, 'message': msg}, status=403)
+            messages.error(request, msg)
+            return redirect('user-list')
+
+        user.is_active = not user.is_active
+        user.save()
+
+        status_str = "activated" if user.is_active else "deactivated"
+        msg = f"User {user.get_full_name() or user.username} has been {status_str} successfully."
+        messages.success(request, msg)
+
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'application/json' in request.META.get('HTTP_ACCEPT', ''):
+            return JsonResponse({
+                'success': True,
+                'is_active': user.is_active,
+                'status': status_str,
+                'message': msg
+            })
+
+        return redirect('user-list')

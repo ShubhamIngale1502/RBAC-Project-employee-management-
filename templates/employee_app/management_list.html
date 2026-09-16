@@ -1,8 +1,103 @@
 {% extends "account/base.html" %}
 {% block title %}{{ page_title }}{% endblock %}
+{% block page_title %}Organisation Setup{% endblock %}
+
 {% block content %}
-<style>.manage-card{background:#fff;border:1px solid #e4e7ec;border-radius:14px;padding:24px;box-shadow:0 5px 20px rgba(16,24,40,.05)}.manage-head{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:20px}.manage-head h2{margin:0;color:#182230}.manage-nav{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}.manage-nav a,.button{padding:8px 11px;border-radius:7px;text-decoration:none;background:#f2f4f7;color:#344054;font-size:.88rem}.button.primary{background:#155eef;color:white}.manage-table{width:100%;border-collapse:collapse}.manage-table th,.manage-table td{padding:13px 9px;text-align:left;border-bottom:1px solid #eaecf0}.manage-table th{color:#667085;font-size:.82rem;text-transform:uppercase}.action-link{color:#155eef;text-decoration:none;border:0;background:none;cursor:pointer;font:inherit}.delete{color:#b42318}.empty{text-align:center;color:#667085;padding:36px}@media(max-width:720px){.manage-table{display:block;overflow-x:auto}}</style>
-<section class="manage-card"><div class="manage-head"><div><h2>{{ page_title }}</h2><small>Manage organisation records and dependencies.</small></div><a class="button primary" href="{% url 'management-create' model_key %}">+ Add new</a></div>
-<nav class="manage-nav"><a href="{% url 'management-list' 'departments' %}">Departments</a><a href="{% url 'management-list' 'designations' %}">Designations</a><a href="{% url 'management-list' 'employment-types' %}">Employment types</a><a href="{% url 'management-list' 'leave-types' %}">Leave types</a><a href="{% url 'management-list' 'holidays' %}">Holidays</a><a href="{% url 'management-list' 'shifts' %}">Shifts</a><a href="{% url 'management-list' 'employees' %}">Employees</a></nav>
-{% if rows %}<table class="manage-table"><thead><tr>{% for header in headers %}<th>{{ header }}</th>{% endfor %}<th>Actions</th></tr></thead><tbody>{% for row in rows %}<tr>{% for cell in row.cells %}<td>{{ cell|default:"—" }}</td>{% endfor %}<td><a class="action-link" href="{% url 'management-update' model_key row.object.pk %}">Edit</a> <a class="action-link delete" href="{% url 'management-delete' model_key row.object.pk %}">Delete</a></td></tr>{% endfor %}</tbody></table>{% else %}<div class="empty">No {{ page_title|lower }} yet.</div>{% endif %}</section>
+<div class="d-flex flex-column gap-4">
+  <!-- Organisation Setup Sub-Navigation Pills -->
+  <ul class="nav nav-pills gap-2">
+    <li class="nav-item">
+      <a class="nav-link {% if model_key == 'departments' %}active fw-semibold rounded-pill{% else %}text-secondary fw-semibold border bg-white rounded-pill{% endif %}" href="{% url 'management-list' 'departments' %}">
+        <i class="bi bi-building me-1"></i> Departments
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link {% if model_key == 'designations' %}active fw-semibold rounded-pill{% else %}text-secondary fw-semibold border bg-white rounded-pill{% endif %}" href="{% url 'management-list' 'designations' %}">
+        <i class="bi bi-briefcase me-1"></i> Designations
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link {% if model_key == 'employment-types' %}active fw-semibold rounded-pill{% else %}text-secondary fw-semibold border bg-white rounded-pill{% endif %}" href="{% url 'management-list' 'employment-types' %}">
+        <i class="bi bi-person-badge me-1"></i> Employment Types
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link {% if model_key == 'leave-types' %}active fw-semibold rounded-pill{% else %}text-secondary fw-semibold border bg-white rounded-pill{% endif %}" href="{% url 'management-list' 'leave-types' %}">
+        <i class="bi bi-calendar2-range me-1"></i> Leave Types
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link {% if model_key == 'holidays' %}active fw-semibold rounded-pill{% else %}text-secondary fw-semibold border bg-white rounded-pill{% endif %}" href="{% url 'management-list' 'holidays' %}">
+        <i class="bi bi-calendar-event me-1"></i> Holidays
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link {% if model_key == 'shifts' %}active fw-semibold rounded-pill{% else %}text-secondary fw-semibold border bg-white rounded-pill{% endif %}" href="{% url 'management-list' 'shifts' %}">
+        <i class="bi bi-clock-history me-1"></i> Shifts
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link {% if model_key == 'employees' %}active fw-semibold rounded-pill{% else %}text-secondary fw-semibold border bg-white rounded-pill{% endif %}" href="{% url 'management-list' 'employees' %}">
+        <i class="bi bi-people me-1"></i> Employee Profiles
+      </a>
+    </li>
+  </ul>
+
+  <!-- Data Table Card -->
+  <div class="card border-0 shadow-sm" style="border-radius: 16px; overflow: hidden;">
+    <div class="card-header bg-white py-3 px-4 d-flex align-items-center justify-content-between border-bottom">
+      <div>
+        <h6 class="fw-bold text-dark mb-0">{{ page_title }}</h6>
+        <small class="text-muted">Manage organisation master records and dependencies</small>
+      </div>
+      <a class="btn btn-primary btn-sm rounded-pill px-3 d-inline-flex align-items-center gap-1" href="{% url 'management-create' model_key %}">
+        <i class="bi bi-plus-lg"></i>
+        <span>Add {{ page_title|slice:":-1" }}</span>
+      </a>
+    </div>
+
+    <div class="table-responsive">
+      {% if rows %}
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              {% for header in headers %}
+                <th {% if forloop.first %}class="ps-4"{% endif %} style="font-size: 0.78rem; text-transform: uppercase; color: #64748b;">
+                  {{ header }}
+                </th>
+              {% endfor %}
+              <th class="text-end pe-4" style="font-size: 0.78rem; text-transform: uppercase; color: #64748b;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in rows %}
+              <tr>
+                {% for cell in row.cells %}
+                  <td {% if forloop.first %}class="ps-4 fw-medium text-dark"{% else %}class="text-secondary small"{% endif %}>
+                    {{ cell|default:"—" }}
+                  </td>
+                {% endfor %}
+                <td class="text-end pe-4">
+                  <div class="btn-group btn-group-sm">
+                    <a class="btn btn-outline-secondary" href="{% url 'management-update' model_key row.object.pk %}" title="Edit Record">
+                      <i class="bi bi-pencil-square"></i>
+                    </a>
+                    <a class="btn btn-outline-danger" href="{% url 'management-delete' model_key row.object.pk %}" title="Delete Record">
+                      <i class="bi bi-trash"></i>
+                    </a>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <div class="text-center text-muted py-5 px-4">
+          <i class="bi bi-folder-x fs-1 text-secondary opacity-50 d-block mb-2"></i>
+          No {{ page_title|lower }} created yet.
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
 {% endblock %}

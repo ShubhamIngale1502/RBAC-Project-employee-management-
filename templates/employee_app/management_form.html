@@ -1,6 +1,53 @@
 {% extends "account/base.html" %}
 {% block title %}{{ page_title }}{% endblock %}
+{% block page_title %}{% if object %}Edit{% else %}Create{% endif %} {{ page_title|slice:":-1" }}{% endblock %}
+
 {% block content %}
-<style>.record-form{max-width:900px;background:#fff;border:1px solid #e4e7ec;border-radius:14px;padding:26px;box-shadow:0 5px 20px rgba(16,24,40,.05)}.record-form h2{margin-top:0}.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.field label{display:block;font-size:.87rem;font-weight:600;margin-bottom:6px;color:#344054}.form-control{width:100%;box-sizing:border-box;border:1px solid #d0d5dd;border-radius:8px;padding:10px;font:inherit}.field ul{margin:4px 0;padding-left:18px;color:#b42318}.form-actions{margin-top:24px;display:flex;gap:10px}.save{background:#155eef;color:#fff;border:0;border-radius:8px;padding:10px 16px;font-weight:600}.cancel{padding:10px;color:#475467;text-decoration:none}@media(max-width:700px){.form-grid{grid-template-columns:1fr}}</style>
-<section class="record-form"><h2>{% if object %}Edit{% else %}Create{% endif %} {{ page_title|slice:":-1" }}</h2><form method="post">{% csrf_token %}{{ form.non_field_errors }}<div class="form-grid">{% for field in form %}<div class="field"><label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} *{% endif %}</label>{{ field }}{% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}{% for error in field.errors %}<ul><li>{{ error }}</li></ul>{% endfor %}</div>{% endfor %}</div><div class="form-actions"><button class="save" type="submit">Save</button><a class="cancel" href="{% url 'management-list' model_key %}">Cancel</a></div></form></section>
+<div class="card border-0 shadow-sm mx-auto" style="border-radius: 16px; max-width: 860px;">
+  <div class="card-header bg-white py-3 px-4 d-flex align-items-center justify-content-between border-bottom">
+    <div>
+      <h6 class="fw-bold text-dark mb-0">{% if object %}Edit{% else %}Create{% endif %} {{ page_title|slice:":-1" }}</h6>
+      <small class="text-muted">Fill out the fields to update organisation record</small>
+    </div>
+    <a href="{% url 'management-list' model_key %}" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+      <i class="bi bi-arrow-left me-1"></i> Back to List
+    </a>
+  </div>
+
+  <div class="card-body p-4">
+    <form method="post">
+      {% csrf_token %}
+
+      {% if form.non_field_errors %}
+        <div class="alert alert-danger border-0 small mb-3" role="alert" style="border-radius: 10px;">
+          {{ form.non_field_errors }}
+        </div>
+      {% endif %}
+
+      <div class="row g-3 mb-4">
+        {% for field in form %}
+          <div class="col-12 {% if field.field.widget.attrs.rows %}col-12{% else %}col-12 col-md-6{% endif %}">
+            <label for="{{ field.id_for_label }}" class="form-label small fw-semibold text-secondary">
+              {{ field.label }}{% if field.field.required %} <span class="text-danger">*</span>{% endif %}
+            </label>
+            {{ field }}
+            {% if field.help_text %}
+              <small class="text-muted d-block mt-1" style="font-size: 0.78rem;">{{ field.help_text }}</small>
+            {% endif %}
+            {% for error in field.errors %}
+              <div class="text-danger small mt-1" style="font-size: 0.8rem;">{{ error }}</div>
+            {% endfor %}
+          </div>
+        {% endfor %}
+      </div>
+
+      <div class="d-flex align-items-center gap-2 pt-3 border-top">
+        <button type="submit" class="btn btn-primary rounded-pill px-4 fw-semibold">
+          <i class="bi bi-check-lg me-1"></i> Save Record
+        </button>
+        <a href="{% url 'management-list' model_key %}" class="btn btn-light rounded-pill px-4 text-secondary border">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
 {% endblock %}

@@ -21,5 +21,6 @@ urlpatterns = [
     path('delete-group/<int:pk>/', DeleteGroup.as_view(), name='delete-group'),
     path("login/",login_view,name="login"),
     path("logout/",logout_view,name="logout"),
+    path("toggle-user-status/<int:pk>/", ToggleUserStatusView.as_view(), name="toggle-user-status"),
 ]   
     

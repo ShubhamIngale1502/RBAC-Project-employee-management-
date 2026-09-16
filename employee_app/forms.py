@@ -14,7 +14,9 @@ class StyledModelForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         for field in self.fields.values():
             if isinstance(field.widget, forms.CheckboxInput):
-                field.widget.attrs["class"] = "form-check"
+                field.widget.attrs["class"] = "form-check-input"
+            elif isinstance(field.widget, forms.Select):
+                field.widget.attrs["class"] = "form-select"
             else:
                 field.widget.attrs["class"] = "form-control"
             if isinstance(field.widget, (forms.DateInput, forms.TimeInput)):
@@ -115,7 +117,7 @@ class LeaveRequestForm(forms.ModelForm):
         model = LeaveRequest
         fields = ("leave_type", "start_date", "end_date", "reason")
         widgets = {
-            "leave_type": forms.Select(attrs={"class": "form-control"}),
+            "leave_type": forms.Select(attrs={"class": "form-select"}),
             "start_date": forms.DateInput(attrs={"class": "form-control", "type": "date"}),
             "end_date": forms.DateInput(attrs={"class": "form-control", "type": "date"}),
             "reason": forms.Textarea(attrs={"class": "form-control", "rows": 4, "placeholder": "Briefly explain your leave request"}),
@@ -127,5 +129,5 @@ class LeaveRequestForm(forms.ModelForm):
 
 
 class LeaveReviewForm(forms.Form):
-    action = forms.ChoiceField(choices=(("APPROVED", "Approve"), ("REJECTED", "Reject")))
-    comment = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 3, "placeholder": "Optional comment"}))
+    action = forms.ChoiceField(choices=(("APPROVED", "Approve"), ("REJECTED", "Reject")), widget=forms.Select(attrs={"class": "form-select"}))
+    comment = forms.CharField(required=False, widget=forms.Textarea(attrs={"class": "form-control", "rows": 3, "placeholder": "Optional comment"}))

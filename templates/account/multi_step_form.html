@@ -1,45 +1,81 @@
 {% extends 'account/base.html' %}
 {% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
 
 {% block content %}
-<div class="card form-card">
-    <div class="card-header">
-        <h2>{{ title }}</h2>
-        <a class="btn btn-secondary" href="{% url 'user-list' %}">Back to list</a>
+<div class="card border-0 shadow-sm" style="border-radius: 16px; max-width: 800px; margin: 0 auto;">
+    <div class="card-header bg-white py-3 px-4 d-flex align-items-center justify-content-between border-bottom">
+        <div>
+            <h6 class="fw-bold text-dark mb-0">{{ title }}</h6>
+            <small class="text-muted">Step {{ step }} of 2 in User Creation Wizard</small>
+        </div>
+        <a class="btn btn-outline-secondary btn-sm rounded-pill px-3" href="{% url 'user-list' %}">
+            <i class="bi bi-arrow-left me-1"></i> Back
+        </a>
     </div>
 
-    <div class="wizard-progress">
-        <div class="step-pill {% if step == 1 %}active{% endif %}">Step 1</div>
-        <div class="step-pill {% if step == 2 %}active{% endif %}">Step 2</div>
-    </div>
-
-    <form method="post">
-        {% csrf_token %}
-
-        {% if form.non_field_errors %}
-            <div class="form-errors">{{ form.non_field_errors }}</div>
-        {% endif %}
-
-        <div class="form-grid">
-            {% for field in form %}
-                <div class="field-group">
-                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                    {{ field }}
-                    {% if field.errors %}
-                        <div class="field-errors">{{ field.errors }}</div>
-                    {% endif %}
+    <div class="card-body p-4">
+        <!-- Visual Wizard Steps Bar -->
+        <div class="d-flex align-items-center justify-content-center mb-4">
+            <div class="d-flex align-items-center gap-2">
+                <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold {% if step == 1 %}bg-primary text-white shadow{% else %}bg-light text-secondary border{% endif %}" style="width: 36px; height: 36px;">
+                    1
                 </div>
-            {% endfor %}
+                <span class="fw-semibold small {% if step == 1 %}text-primary{% else %}text-muted{% endif %}">Account Details</span>
+            </div>
+
+            <div class="bg-secondary bg-opacity-25 mx-3" style="height: 2px; width: 60px;"></div>
+
+            <div class="d-flex align-items-center gap-2">
+                <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold {% if step == 2 %}bg-primary text-white shadow{% else %}bg-light text-secondary border{% endif %}" style="width: 36px; height: 36px;">
+                    2
+                </div>
+                <span class="fw-semibold small {% if step == 2 %}text-primary{% else %}text-muted{% endif %}">Profile & Address</span>
+            </div>
         </div>
 
-        <div class="form-actions">
-            {% if step == 2 %}
-                <a class="btn btn-secondary" href="{% url 'multi-step-1' %}">Back</a>
+        <form method="post">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger border-0 small mb-4" role="alert" style="border-radius: 10px;">
+                    {{ form.non_field_errors }}
+                </div>
             {% endif %}
-            <button class="btn btn-primary" type="submit">{% if step == 1 %}Continue{% else %}Finish{% endif %}</button>
-        </div>
-    </form>
+
+            <div class="row g-3 mb-4">
+                {% for field in form %}
+                    <div class="col-12 col-md-6">
+                        <label for="{{ field.id_for_label }}" class="form-label small fw-semibold text-secondary">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.errors %}
+                            <div class="text-danger text-xs mt-1" style="font-size: 0.8rem;">{{ field.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+
+            <div class="d-flex align-items-center justify-content-between pt-3 border-top">
+                {% if step == 2 %}
+                    <a class="btn btn-outline-secondary rounded-pill px-4" href="{% url 'multi-step-1' %}">
+                        <i class="bi bi-chevron-left me-1"></i> Back
+                    </a>
+                {% else %}
+                    <div></div>
+                {% endif %}
+
+                <button class="btn btn-primary px-4 rounded-pill fw-semibold" type="submit">
+                    {% if step == 1 %}
+                        Continue <i class="bi bi-chevron-right ms-1"></i>
+                    {% else %}
+                        Complete Registration <i class="bi bi-check-lg ms-1"></i>
+                    {% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
 </div>
+
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
 <script>
@@ -51,52 +87,33 @@
                 country : country_id
             },
             success:function(data){
-                $("#id_state").html(
-                    '<option value="">Select State</option>'
-                );
-                $("#id_city").html(
-                    '<option value="">Select City</option>'
-                );
+                $("#id_state").html('<option value="">Select State</option>');
+                $("#id_city").html('<option value="">Select City</option>');
                 $.each(data, function(index, state){
                     $("#id_state").append(
-                        '<option value="'+state.id+'">'+
-                        state.state_name+
-                        '</option>'
+                        '<option value="'+state.id+'">'+state.state_name+'</option>'
                     );
                 });
             }
-        })
-    })
-</script>
-<script>
-
-$("#id_state").change(function () {
-
-    var state_id = $(this).val();
-
-    $.ajax({
-        url: "{% url 'ajax-load-cities' %}",
-        data: {
-            state: state_id
-        },
-        success: function (data) {
-
-            $("#id_city").html('<option value="">Select City</option>');
-
-            $.each(data, function (index, city) {
-
-                $("#id_city").append(
-                    '<option value="' + city.id + '">' +
-                    city.city_name +
-                    '</option>'
-                );
-
-            });
-
-        }
+        });
     });
 
-});
-
+    $("#id_state").change(function () {
+        var state_id = $(this).val();
+        $.ajax({
+            url: "{% url 'ajax-load-cities' %}",
+            data: {
+                state: state_id
+            },
+            success: function (data) {
+                $("#id_city").html('<option value="">Select City</option>');
+                $.each(data, function (index, city) {
+                    $("#id_city").append(
+                        '<option value="' + city.id + '">' + city.city_name + '</option>'
+                    );
+                });
+            }
+        });
+    });
 </script>
 {% endblock %}

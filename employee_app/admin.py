@@ -1,11 +1,13 @@
 from django.contrib import admin
-from .models import Department, Designation, EmploymentType, Shift, Employee, LeaveApproval, LeaveRequest
+from .models import Department, Designation, EmploymentType, Shift, Employee, LeaveApproval, LeaveRequest, LeaveType, LeaveBalance
 
 admin.site.register(Department)
 admin.site.register(Designation)
 admin.site.register(EmploymentType)
 admin.site.register(Shift)
 admin.site.register(Employee)
+admin.site.register(LeaveType)
+admin.site.register(LeaveBalance)
 
 
 class LeaveApprovalInline(admin.TabularInline):
