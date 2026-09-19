@@ -546,8 +546,6 @@ class ManagementMixin(LoginRequiredMixin, PermissionRequiredMixin):
             instance.created_by = self.request.user
         if hasattr(instance, "updated_by"):
             instance.updated_by = self.request.user
-        # ModelForm.is_valid() already runs model validation. Calling full_clean()
-        # again here would validate omitted, auto-generated code fields as blank.
         return super().form_valid(form)
 
     def get_success_url(self):

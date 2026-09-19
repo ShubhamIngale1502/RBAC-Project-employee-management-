@@ -1,0 +1,57 @@
+{% extends "account/base.html" %}
+{% block content %}
+<div class="container py-4" style="max-width: 640px;">
+{% include "autohire/_nav.html" %}
+
+  <h4 class="mb-3">Add candidate</h4>
+  <p class="text-muted">
+    Upload a resume (PDF, DOCX or TXT, max 5&nbsp;MB). The AutoHire agent will
+    parse it, index it, and - if you leave the box below checked - screen it
+    against the job you pick straight away.
+  </p>
+
+  <form method="post" enctype="multipart/form-data" novalidate>
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+      <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <div class="mb-3">
+      <label class="form-label">{{ form.job.label }}</label>
+      {{ form.job }}
+      {{ form.job.errors }}
+    </div>
+    <div class="mb-3">
+      <label class="form-label">{{ form.full_name.label }}</label>
+      {{ form.full_name }}
+      {{ form.full_name.errors }}
+    </div>
+    <div class="mb-3">
+      <label class="form-label">{{ form.email.label }}</label>
+      {{ form.email }}
+      {{ form.email.errors }}
+    </div>
+    <div class="mb-3">
+      <label class="form-label">{{ form.mobile.label }}</label>
+      {{ form.mobile }}
+    </div>
+    <div class="mb-3">
+      <label class="form-label">{{ form.source.label }}</label>
+      {{ form.source }}
+    </div>
+    <div class="mb-3">
+      <label class="form-label">{{ form.resume_file.label }}</label>
+      {{ form.resume_file }}
+      {{ form.resume_file.errors }}
+    </div>
+    <div class="form-check mb-4">
+      {{ form.run_agent_now }}
+      <label class="form-check-label">{{ form.run_agent_now.label }}</label>
+    </div>
+
+    <button class="btn btn-primary">Add candidate</button>
+    <a class="btn btn-link" href="{% url 'autohire-application-list' %}">Cancel</a>
+  </form>
+</div>
+{% endblock %}

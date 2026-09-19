@@ -1,0 +1,54 @@
+{% extends "account/base.html" %}
+{% block content %}
+<div class="container-fluid py-3">
+{% include "autohire/_nav.html" %}
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">Job postings</h4>
+    {% if perms.add %}
+      <a class="btn btn-primary btn-sm" href="{% url 'autohire-job-create' %}">+ New job posting</a>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <table class="table table-hover mb-0">
+      <thead>
+        <tr>
+          <th>Code</th><th>Title</th><th>Department</th><th>Openings</th>
+          <th>Applications</th><th>Shortlisted</th><th>Status</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for job in jobs %}
+        <tr>
+          <td>{{ job.job_code }}</td>
+          <td>{{ job.title }}</td>
+          <td>{{ job.department.department_name }}</td>
+          <td>{{ job.openings }}</td>
+          <td>{{ job.application_count }}</td>
+          <td>{{ job.shortlisted }}</td>
+          <td><span class="badge bg-secondary">{{ job.get_status_display }}</span></td>
+          <td class="text-end">
+            {% if perms.add %}
+            <form method="post" action="{% url 'autohire-job-bulk-screen' job.pk %}" class="d-inline">
+              {% csrf_token %}
+              <button class="btn btn-sm btn-outline-secondary">Bulk screen</button>
+            </form>
+            {% endif %}
+            {% if perms.edit %}
+              <a class="btn btn-sm btn-outline-primary" href="{% url 'autohire-job-update' job.pk %}">Edit</a>
+            {% endif %}
+            {% if perms.delete %}
+              <a class="btn btn-sm btn-outline-danger" href="{% url 'autohire-job-delete' job.pk %}">Delete</a>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" class="text-muted text-center py-4">No job postings yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</div>
+{% endblock %}

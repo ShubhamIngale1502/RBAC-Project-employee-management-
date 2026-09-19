@@ -1,0 +1,83 @@
+{% extends "account/base.html" %}
+{% block content %}
+<div class="container py-4" style="max-width: 760px;">
+{% include "autohire/_nav.html" %}
+
+  <h4 class="mb-3">{{ title }}</h4>
+
+  <form method="post" novalidate>
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+      <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <div class="row g-3">
+      <div class="col-md-8">
+        <label class="form-label">{{ form.title.label }}</label>
+        {{ form.title }}
+        {{ form.title.errors }}
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">{{ form.status.label }}</label>
+        {{ form.status }}
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label">{{ form.department.label }}</label>
+        {{ form.department }}
+        {{ form.department.errors }}
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">{{ form.designation.label }}</label>
+        {{ form.designation }}
+      </div>
+
+      <div class="col-12">
+        <label class="form-label">{{ form.description.label }}</label>
+        {{ form.description }}
+        {{ form.description.errors }}
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label">{{ form.must_have_skills.label }}</label>
+        {{ form.must_have_skills }}
+        <small class="text-muted">{{ form.must_have_skills.help_text }}</small>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">{{ form.good_to_have_skills.label }}</label>
+        {{ form.good_to_have_skills }}
+        <small class="text-muted">{{ form.good_to_have_skills.help_text }}</small>
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label">{{ form.min_experience_years.label }}</label>
+        {{ form.min_experience_years }}
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">{{ form.max_experience_years.label }}</label>
+        {{ form.max_experience_years }}
+        {{ form.max_experience_years.errors }}
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">{{ form.openings.label }}</label>
+        {{ form.openings }}
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label">{{ form.location.label }}</label>
+        {{ form.location }}
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">{{ form.hiring_manager.label }}</label>
+        {{ form.hiring_manager }}
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <button class="btn btn-primary">Save</button>
+      <a class="btn btn-link" href="{% url 'autohire-job-list' %}">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

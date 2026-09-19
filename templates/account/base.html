@@ -244,6 +244,11 @@
                 <i class="bi bi-building-fill-gear"></i>
                 <span>Organisation Setup</span>
             </a>
+            <div class="menu-header">Recruitment</div>
+            <a href="{% url 'autohire-dashboard' %}" class="nav-item-link {% if 'autohire' in request.resolver_match.url_name %}active{% endif %}">
+                <i class="bi bi-robot"></i>
+                <span>AutoHire Inbox</span>
+            </a>
         </div>
 
         <!-- Sidebar Footer Logout -->
