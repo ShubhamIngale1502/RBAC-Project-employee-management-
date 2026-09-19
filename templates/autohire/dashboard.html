@@ -1,0 +1,90 @@
+{% extends "account/base.html" %}
+{% block content %}
+<div class="container-fluid py-3">
+{% include "autohire/_nav.html" %}
+
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">Recruitment dashboard</h4>
+    {% if perms.add %}
+      <a class="btn btn-primary btn-sm" href="{% url 'autohire-job-create' %}">+ New job posting</a>
+    {% endif %}
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-3">
+      <div class="card text-center">
+        <div class="card-body">
+          <h2 class="mb-0">{{ open_jobs }}</h2>
+          <small class="text-muted">Open job postings</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card text-center">
+        <div class="card-body">
+          <h2 class="mb-0">{{ total_applications }}</h2>
+          <small class="text-muted">Total applications</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card text-center border-warning">
+        <div class="card-body">
+          <h2 class="mb-0">{{ awaiting_approval }}</h2>
+          <small class="text-muted">Awaiting your approval</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <a class="text-decoration-none" href="{% url 'autohire-approval-inbox' %}">
+        <div class="card text-center h-100">
+          <div class="card-body d-flex flex-column justify-content-center">
+            <small class="text-muted">Go to approval inbox &rarr;</small>
+          </div>
+        </div>
+      </a>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-md-5">
+      <div class="card">
+        <div class="card-header">Applications by stage</div>
+        <ul class="list-group list-group-flush">
+          {% for row in stage_counts %}
+          <li class="list-group-item d-flex justify-content-between">
+            <span>{{ row.stage }}</span>
+            <span class="badge bg-secondary">{{ row.total }}</span>
+          </li>
+          {% empty %}
+          <li class="list-group-item text-muted">No applications yet.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+
+    <div class="col-md-7">
+      <div class="card">
+        <div class="card-header">Pending agent decisions</div>
+        <ul class="list-group list-group-flush">
+          {% for checkpoint in pending_checkpoints %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <div>
+              <strong>{{ checkpoint.application.candidate.full_name }}</strong>
+              <small class="text-muted d-block">
+                {{ checkpoint.application.job.title }} &middot; {{ checkpoint.get_kind_display }}
+              </small>
+            </div>
+            <a class="btn btn-sm btn-outline-primary"
+               href="{% url 'autohire-checkpoint-decide' checkpoint.pk %}">Review</a>
+          </li>
+          {% empty %}
+          <li class="list-group-item text-muted">Nothing waiting on you right now.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

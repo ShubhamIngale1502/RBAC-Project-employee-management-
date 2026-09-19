@@ -39,4 +39,5 @@ urlpatterns = [
     path('users/', include('account.urls')),
     path('api/', include('employee_app.urls')),
     path('leaves/', include('employee_app.web_urls')),
+    path("recruitment/", include("autohire.web_urls")),
 ]

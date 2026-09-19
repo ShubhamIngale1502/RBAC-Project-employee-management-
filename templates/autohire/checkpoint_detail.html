@@ -1,0 +1,27 @@
+{% extends "account/base.html" %}
+{% block content %}
+<div class="container py-4" style="max-width: 760px;">
+{% include "autohire/_nav.html" %}
+
+  <h5>{{ checkpoint.get_kind_display }} &mdash; {{ checkpoint.application.candidate.full_name }}</h5>
+  <p class="text-muted">{{ checkpoint.application.job.title }}</p>
+
+  <div class="card mb-3">
+    <div class="card-body">
+      <p><strong>Agent recommendation:</strong>
+         {{ checkpoint.proposal.recommendation }} ({{ checkpoint.proposal.match_score }}/100)</p>
+      <p>{{ checkpoint.rationale }}</p>
+      <h6>Evidence</h6>
+      <ul class="small">{% for c in checkpoint.citations %}<li>{{ c }}</li>{% endfor %}</ul>
+    </div>
+  </div>
+
+  <form method="post">
+    {% csrf_token %}
+    <div class="mb-3">{{ form.decision.label_tag }} {{ form.decision }}</div>
+    <div class="mb-3">{{ form.comment.label_tag }} {{ form.comment }}</div>
+    <button class="btn btn-primary">Record decision</button>
+    <a class="btn btn-link" href="{% url 'autohire-approval-inbox' %}">Cancel</a>
+  </form>
+</div>
+{% endblock %}

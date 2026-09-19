@@ -1,0 +1,26 @@
+{% with active=request.resolver_match.url_name perms=request.recruitment_perms %}
+<ul class="nav nav-pills mb-4">
+  <li class="nav-item">
+    <a class="nav-link {% if active == 'autohire-dashboard' %}active{% endif %}"
+       href="{% url 'autohire-dashboard' %}">Dashboard</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {% if active == 'autohire-job-list' %}active{% endif %}"
+       href="{% url 'autohire-job-list' %}">Jobs</a>
+  </li>
+  {% if perms.add %}
+  <li class="nav-item">
+    <a class="nav-link {% if active == 'autohire-candidate-create' %}active{% endif %}"
+       href="{% url 'autohire-candidate-create' %}">Add candidate</a>
+  </li>
+  {% endif %}
+  <li class="nav-item">
+    <a class="nav-link {% if active == 'autohire-application-list' %}active{% endif %}"
+       href="{% url 'autohire-application-list' %}">Applications</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {% if active == 'autohire-approval-inbox' %}active{% endif %}"
+       href="{% url 'autohire-approval-inbox' %}">Approvals</a>
+  </li>
+</ul>
+{% endwith %}

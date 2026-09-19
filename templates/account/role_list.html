@@ -307,7 +307,7 @@
                                             <i class="bi bi-pencil"></i>
                                         </button>
                                         {% endif %}
-                                        {% if role.name != 'SuperAdmin' and role.name != 'Partner' %}
+                                        {% if role.name != 'Admin' and role.name != 'HR' %}
                                         {% if can_delete_group %}
                                         <button class="btn btn-link btn-sm p-0 text-danger delete-role-btn" data-role-id="{{ role.id }}" data-role-name="{{ role.name }}" title="Delete Role">
                                             <i class="bi bi-trash"></i>

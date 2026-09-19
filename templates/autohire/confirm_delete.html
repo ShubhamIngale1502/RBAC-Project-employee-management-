@@ -1,0 +1,18 @@
+{% extends "account/base.html" %}
+{% block content %}
+<div class="container py-4" style="max-width: 560px;">
+{% include "autohire/_nav.html" %}
+
+  <div class="card border-danger">
+    <div class="card-header bg-danger-subtle">Confirm delete</div>
+    <div class="card-body">
+      <p>Are you sure you want to delete <strong>{{ object }}</strong>? This cannot be undone.</p>
+      <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Yes, delete</button>
+        <a class="btn btn-link" href="{% url 'autohire-job-list' %}">Cancel</a>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

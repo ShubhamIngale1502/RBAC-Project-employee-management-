@@ -1,0 +1,35 @@
+{% extends "account/base.html" %}
+{% block content %}
+<div class="container py-4">
+  <h4 class="mb-3">Approval inbox</h4>
+
+  {% if not can_approve %}
+    <div class="alert alert-info">
+      You can see the queue but you don't have approval rights on the RECRUITMENT module,
+      so you can't act on these yourself.
+    </div>
+  {% endif %}
+
+  <div class="list-group">
+    {% for checkpoint in checkpoints %}
+    <div class="list-group-item d-flex justify-content-between align-items-center">
+      <div>
+        <strong>{{ checkpoint.application.candidate.full_name }}</strong>
+        <span class="text-muted">&middot; {{ checkpoint.application.job.title }}</span>
+        <span class="badge bg-secondary ms-2">{{ checkpoint.get_kind_display }}</span>
+        {% if checkpoint.proposal.match_score %}
+          <span class="badge bg-primary ms-1">Fit {{ checkpoint.proposal.match_score }}/100</span>
+        {% endif %}
+        <p class="mb-0 small text-muted mt-1">{{ checkpoint.rationale|truncatewords:30 }}</p>
+      </div>
+      {% if can_approve %}
+        <a class="btn btn-sm btn-primary"
+           href="{% url 'autohire-checkpoint-decide' checkpoint.pk %}">Review</a>
+      {% endif %}
+    </div>
+    {% empty %}
+    <div class="list-group-item text-muted text-center py-4">Nothing waiting for approval.</div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
