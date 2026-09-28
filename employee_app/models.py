@@ -342,8 +342,8 @@ class Employee(models.Model):
     #         raise ValidationError({"designation": "The designation must belong to the selected department."})
     #     if self.manager_id == self.id:
     #         raise ValidationError({"manager": "An employee cannot be their own manager."})
-    # def __str__(self):
-    #     return f"{self.employee_code} - {self.user.get_full_name()}"
+    def __str__(self):
+        return f"{self.employee_code} - {self.user.get_full_name()}"
 
 
 class LeaveRequest(models.Model):

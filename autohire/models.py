@@ -264,3 +264,42 @@ class ApprovalCheckpoint(TimeStampedModel):
     @property
     def is_open(self):
         return self.status == self.Status.PENDING
+
+
+class InterviewRound(TimeStampedModel):
+    class Mode(models.TextChoices):
+        ONLINE = "ONLINE", "Online (video call)"
+        ONSITE = "ONSITE", "Onsite"
+        PHONE = "PHONE", "Phone"
+ 
+    class Status(models.TextChoices):
+        SCHEDULED = "SCHEDULED", "Scheduled"
+        COMPLETED = "COMPLETED", "Completed"
+        CANCELLED = "CANCELLED", "Cancelled"
+        RESCHEDULED = "RESCHEDULED", "Rescheduled"
+ 
+    application = models.ForeignKey(
+        Application, on_delete=models.CASCADE, related_name="interviews"
+    )
+    round_number = models.PositiveSmallIntegerField(default=1)
+    mode = models.CharField(max_length=10, choices=Mode.choices, default=Mode.ONLINE)
+    scheduled_at = models.DateTimeField()
+    duration_minutes = models.PositiveIntegerField(default=45)
+    interviewer = models.ForeignKey(
+        "employee_app.Employee", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="interviews_conducted",
+    )
+    meeting_link = models.URLField(blank=True, help_text="Video call link, if mode is Online.")
+    location = models.CharField(max_length=200, blank=True, help_text="Office/room, if mode is Onsite.")
+    notes = models.TextField(blank=True, help_text="Internal notes - not sent to the candidate.")
+    status = models.CharField(max_length=12, choices=Status.choices, default=Status.SCHEDULED)
+    scheduled_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="interviews_scheduled",
+    )
+ 
+    class Meta:
+        ordering = ("-scheduled_at",)
+ 
+    def __str__(self):
+        return f"Round {self.round_number} - {self.application} @ {self.scheduled_at:%d %b %Y %H:%M}"

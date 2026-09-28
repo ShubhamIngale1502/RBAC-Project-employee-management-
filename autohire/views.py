@@ -10,10 +10,15 @@ from django.shortcuts import get_object_or_404, redirect, render
 
 from .orchestrator import apply_decision, trigger_screening
 from .forms import (
-    ApplicationFilterForm, CandidateForm, CheckpointDecisionForm, JobPostingForm,
+    ApplicationFilterForm, CandidateForm, CheckpointDecisionForm,
+    InterviewScheduleForm, JobPostingForm,
 )
-from .models import AgentRun, Application, ApprovalCheckpoint, Candidate, JobPosting
-from .permissions import (can_act_on, module_permissions, require_permission, scope_applications, scope_jobs,)
+from .models import (
+    AgentRun, Application, ApprovalCheckpoint, Candidate, InterviewRound, JobPosting,
+)
+from .permissions import (
+    can_act_on, module_permissions, require_permission, scope_applications, scope_jobs,
+)
 from .tasks import bulk_screen_job_task, ingest_resume_task
 
 
@@ -141,6 +146,10 @@ def application_detail(request, pk):
         "open_checkpoints": application.checkpoints.filter(
             status=ApprovalCheckpoint.Status.PENDING
         ),
+        "interviews": application.interviews.select_related("interviewer"),
+        "can_schedule_interview": application.stage in (
+            Application.Stage.SHORTLISTED, Application.Stage.INTERVIEW,
+        ),
         "perms": request.recruitment_perms,
     })
 
@@ -162,6 +171,62 @@ def job_bulk_screen(request, pk):
         bulk_screen_job_task.delay(job.id, request.user.id)
         messages.info(request, "Bulk screening queued for all new applications.")
     return redirect("autohire-job-list")
+
+
+# ------------------------------- interviews --------------------------------
+@require_permission("edit")
+def interview_schedule(request, pk):
+    """Schedule a round for a shortlisted (or already-in-interview) application.
+
+    Moves the application to INTERVIEW and queues the real invite email with
+    the date/time/mode/link the recruiter just entered - separate from the
+    generic SHORTLISTED/REJECTED template emails in tasks.py.
+    """
+    application = get_object_or_404(
+        scope_applications(request.user, Application.objects.select_related("candidate", "job")),
+        pk=pk,
+    )
+    if application.stage not in (Application.Stage.SHORTLISTED, Application.Stage.INTERVIEW):
+        messages.error(request, "Shortlist the candidate before scheduling an interview.")
+        return redirect("autohire-application-detail", pk=pk)
+
+    next_round = application.interviews.count() + 1
+    form = InterviewScheduleForm(request.POST or None, initial={"round_number": next_round})
+
+    if request.method == "POST" and form.is_valid():
+        with transaction.atomic():
+            interview = form.save(commit=False)
+            interview.application = application
+            interview.scheduled_by = request.user
+            interview.save()
+
+            if application.stage != Application.Stage.INTERVIEW:
+                application.mark_decided(request.user, Application.Stage.INTERVIEW)
+
+            from .tasks import send_interview_invite_task
+            transaction.on_commit(lambda: send_interview_invite_task.delay(interview.id))
+
+        messages.success(request, "Interview scheduled and invite email queued.")
+        return redirect("autohire-application-detail", pk=pk)
+
+    return render(request, "autohire/interview_form.html", {
+        "form": form, "application": application,
+    })
+
+
+@require_permission("edit")
+def interview_cancel(request, pk):
+    interview = get_object_or_404(
+        InterviewRound.objects.filter(
+            application__in=scope_applications(request.user, Application.objects.all())
+        ),
+        pk=pk,
+    )
+    if request.method == "POST":
+        interview.status = InterviewRound.Status.CANCELLED
+        interview.save(update_fields=["status", "updated_at"])
+        messages.info(request, "Interview round cancelled.")
+    return redirect("autohire-application-detail", pk=interview.application_id)
 
 
 # --------------------------- approval checkpoints -------------------------

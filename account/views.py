@@ -21,11 +21,15 @@ import pandas as pd
 import io
 from django.utils import timezone
 from django.db import transaction
+from django.core.paginator import Paginator
 
 
 def user_list(request):
     users = User.objects.order_by('-created_date')
-    return render(request, 'account/user_list.html', {'users': users})
+    paginator = Paginator(users,10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    return render(request, 'account/user_list.html', {'users': users, 'page_obj': page_obj})
 
 def user_create(request):
     return redirect('multi-step-1')
