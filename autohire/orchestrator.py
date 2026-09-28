@@ -385,7 +385,7 @@ def apply_decision(checkpoint_id: int, user, approved: bool, comment: str = "") 
     )
     if not checkpoint.is_open:
         return checkpoint
-
+ 
     checkpoint.status = (
         ApprovalCheckpoint.Status.APPROVED if approved else ApprovalCheckpoint.Status.REJECTED
     )
@@ -393,7 +393,7 @@ def apply_decision(checkpoint_id: int, user, approved: bool, comment: str = "") 
     checkpoint.comment = comment
     checkpoint.decided_at = timezone.now()
     checkpoint.save(update_fields=["status", "decided_by", "comment", "decided_at", "updated_at"])
-
+ 
     application = checkpoint.application
     if approved:
         if checkpoint.kind == ApprovalCheckpoint.Kind.SHORTLIST:
@@ -404,23 +404,27 @@ def apply_decision(checkpoint_id: int, user, approved: bool, comment: str = "") 
             )
         elif checkpoint.kind == ApprovalCheckpoint.Kind.REJECT:
             application.mark_decided(user, Application.Stage.REJECTED)
-        elif checkpoint.kind == ApprovalCheckpoint.Kind.INTERVIEW_INVITE:
-            application.mark_decided(user, Application.Stage.INTERVIEW)
             from autohire.tasks import send_candidate_email_task
             transaction.on_commit(
-                lambda: send_candidate_email_task.delay(application.id, "INTERVIEW")
+                lambda: send_candidate_email_task.delay(application.id, "REJECTED")
             )
+        elif checkpoint.kind == ApprovalCheckpoint.Kind.INTERVIEW_INVITE:
+            # Stage change only - the actual invite email goes out once a
+            # round is scheduled with real date/time (see views.schedule_interview
+            # and tasks.send_interview_invite_task).
+            application.mark_decided(user, Application.Stage.INTERVIEW)
         elif checkpoint.kind == ApprovalCheckpoint.Kind.OFFER:
             application.mark_decided(user, Application.Stage.OFFER)
     else:
-        # Human overruled the agent - park the application, no side effects.
+        # Human overruled the agent - park the application, no side effects,
+        # no email. Recruiter can still manually reject/shortlist afterwards.
         application.mark_decided(user, Application.Stage.SCREENED)
-
+ 
     run = checkpoint.run
     if not run.checkpoints.filter(status=ApprovalCheckpoint.Status.PENDING).exists():
         run.status = AgentRun.Status.COMPLETED
         run.save(update_fields=["status", "updated_at"])
-
+ 
     AgentStep.objects.create(
         run=run,
         node="human_decision",

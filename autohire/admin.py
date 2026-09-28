@@ -1,7 +1,8 @@
 from django.contrib import admin
 
 from .models import (
-    AgentRun, AgentStep, Application, ApprovalCheckpoint, Candidate, JobPosting, ResumeChunk,
+    AgentRun, AgentStep, Application, ApprovalCheckpoint, Candidate,
+    InterviewRound, JobPosting, ResumeChunk,
 )
 
 
@@ -17,6 +18,7 @@ class CandidateAdmin(admin.ModelAdmin):
     list_display = ("full_name", "email", "source", "is_indexed", "indexed_at")
     list_filter = ("source", "is_indexed")
     search_fields = ("full_name", "email")
+    readonly_fields = ("resume_text",)  # handy for debugging extraction issues
 
 
 @admin.register(Application)
@@ -47,6 +49,13 @@ class AgentRunAdmin(admin.ModelAdmin):
 class ApprovalCheckpointAdmin(admin.ModelAdmin):
     list_display = ("id", "application", "kind", "status", "decided_by", "decided_at")
     list_filter = ("kind", "status")
+
+
+@admin.register(InterviewRound)
+class InterviewRoundAdmin(admin.ModelAdmin):
+    list_display = ("id", "application", "round_number", "scheduled_at", "mode", "status", "interviewer")
+    list_filter = ("status", "mode")
+    search_fields = ("application__candidate__full_name",)
 
 
 admin.site.register(ResumeChunk)

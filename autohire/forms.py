@@ -1,6 +1,6 @@
 from django import forms
 
-from .models import Application, Candidate, JobPosting
+from .models import Application, Candidate, JobPosting,InterviewRound
 
 
 class StyledModelForm(forms.ModelForm):
@@ -97,3 +97,25 @@ class ApplicationFilterForm(forms.Form):
         required=False, min_value=0, max_value=100,
         widget=forms.NumberInput(attrs={"class": "form-control", "placeholder": "Min score"}),
     )
+
+class InterviewScheduleForm(StyledModelForm):
+    scheduled_at = forms.DateTimeField(
+        widget=forms.DateTimeInput(attrs={"type": "datetime-local"}),
+        help_text="Candidate's local time zone should be confirmed separately.",
+    )
+ 
+    class Meta:
+        model = InterviewRound
+        fields = (
+            "round_number", "mode", "scheduled_at", "duration_minutes",
+            "interviewer", "meeting_link", "location", "notes",
+        )
+ 
+    def clean(self):
+        cleaned = super().clean()
+        mode = cleaned.get("mode")
+        if mode == InterviewRound.Mode.ONLINE and not cleaned.get("meeting_link"):
+            self.add_error("meeting_link", "Add a meeting link for an online interview.")
+        if mode == InterviewRound.Mode.ONSITE and not cleaned.get("location"):
+            self.add_error("location", "Add a location for an onsite interview.")
+        return cleaned

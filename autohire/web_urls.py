@@ -16,6 +16,9 @@ urlpatterns = [
     path("applications/", views.application_list, name="autohire-application-list"),
     path("applications/<int:pk>/", views.application_detail, name="autohire-application-detail"),
     path("applications/<int:pk>/rescreen/", views.application_rescreen, name="autohire-application-rescreen"),
+    path("applications/<int:pk>/schedule-interview/", views.interview_schedule, name="autohire-interview-schedule"),
+
+    path("interviews/<int:pk>/cancel/", views.interview_cancel, name="autohire-interview-cancel"),
 
     path("approvals/", views.approval_inbox, name="autohire-approval-inbox"),
     path("approvals/<int:pk>/decide/", views.checkpoint_decide, name="autohire-checkpoint-decide"),
